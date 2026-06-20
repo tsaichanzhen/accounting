@@ -206,6 +206,7 @@
         <div class="nav-item admin-only" onclick="showSection('mailsetting',this)"><span class="icon">✉</span>信箱設定</div>
         <div class="nav-item admin-only" onclick="showSection('history',this)"><span class="icon">🕐</span>登入歷程</div>
         <div class="nav-item" onclick="showSection('myhistory',this)"><span class="icon">📅</span>我的紀錄</div>
+        <div class="nav-item" onclick="showSection('changepwd',this)"><span class="icon">🔑</span>修改密碼</div>
       </div>
     </div>
 
@@ -387,6 +388,39 @@
             <thead><tr><th>登入時間</th><th>登出時間</th><th>操作類型</th></tr></thead>
             <tbody id="my-history-table"></tbody>
           </table></div>
+        </div>
+      </div>
+
+      <!-- 修改密碼 -->
+      <div class="section" id="sec-changepwd">
+        <div class="page-header"><div><div class="page-title">修改密碼</div><div class="page-subtitle">修改您的登入密碼</div></div></div>
+        <div class="card" style="max-width:440px">
+          <div class="card-title">🔑 修改登入密碼</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>目前密碼</label>
+              <input type="password" id="pwd-current" placeholder="請輸入目前密碼">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>新密碼</label>
+              <input type="password" id="pwd-new" placeholder="請輸入新密碼（至少6位）">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>確認新密碼</label>
+              <input type="password" id="pwd-confirm" placeholder="再次輸入新密碼">
+            </div>
+          </div>
+          <div style="margin-top:4px;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue)">
+            💡 密碼修改後，下次登入請使用新密碼
+          </div>
+          <div class="modal-footer" style="justify-content:flex-start;margin-top:12px">
+            <button class="btn btn-primary" onclick="changePassword()">確認修改</button>
+            <span id="pwd-status" style="font-size:13px;margin-left:12px"></span>
+          </div>
         </div>
       </div>
 
@@ -968,6 +1002,40 @@ function loadMailSetting(){
   const s=JSON.parse(localStorage.getItem('mailSetting')||'{}');
   const n=document.getElementById('manager-name');const e=document.getElementById('manager-email');
   if(n)n.value=s.name||'';if(e)e.value=s.email||'';
+}
+
+// ── 修改密碼 ──
+async function changePassword(){
+  const current = document.getElementById('pwd-current').value.trim();
+  const newPwd  = document.getElementById('pwd-new').value.trim();
+  const confirm = document.getElementById('pwd-confirm').value.trim();
+  const statusEl = document.getElementById('pwd-status');
+
+  if(!current||!newPwd||!confirm){
+    statusEl.style.color='var(--red)'; statusEl.textContent='請填寫所有欄位'; return;
+  }
+  if(current !== currentUser.password && current !== CACHE.accounts.find(a=>a.id===currentUser.id)?.password){
+    statusEl.style.color='var(--red)'; statusEl.textContent='目前密碼錯誤'; return;
+  }
+  if(newPwd.length < 6){
+    statusEl.style.color='var(--red)'; statusEl.textContent='新密碼至少需要6位'; return;
+  }
+  if(newPwd !== confirm){
+    statusEl.style.color='var(--red)'; statusEl.textContent='兩次輸入的新密碼不一致'; return;
+  }
+  const ok = await sbUpdate('accounts', currentUser.id, {password: newPwd});
+  if(ok){
+    // 更新快取
+    const acc = CACHE.accounts.find(a=>a.id===currentUser.id);
+    if(acc) acc.password = newPwd;
+    document.getElementById('pwd-current').value='';
+    document.getElementById('pwd-new').value='';
+    document.getElementById('pwd-confirm').value='';
+    statusEl.style.color='var(--green)'; statusEl.textContent='✓ 密碼已成功修改！';
+    setTimeout(()=>statusEl.textContent='', 3000);
+  } else {
+    statusEl.style.color='var(--red)'; statusEl.textContent='修改失敗，請重試';
+  }
 }
 
 // ── 刪除 ──
