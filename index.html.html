@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>財會工作進度小幫手</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --navy:#1a2744;--navy-light:#243357;--gold:#c8a84b;--gold-light:#e0c070;
+    --cream:#f7f5f0;--white:#ffffff;--gray-100:#f0eff0;--gray-200:#e2e1e4;
+    --gray-400:#9a98a0;--gray-600:#5c5a62;--gray-800:#2e2c34;
+    --green:#2d7a4f;--green-light:#e8f5ee;--red:#b83232;--red-light:#fdeaea;
+    --orange:#c26b1a;--orange-light:#fdf0e0;--blue:#1e5fa8;--blue-light:#e8f0fb;
+    --shadow:0 2px 12px rgba(26,39,68,.10);--shadow-lg:0 8px 32px rgba(26,39,68,.16);
+    --radius:8px;--radius-lg:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI','Microsoft JhengHei',sans-serif;background:var(--cream);color:var(--gray-800);min-height:100vh;}
+
+  /* LOGIN */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#2a3f6f 60%,#1a2744 100%);}
+  .login-box{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:48px 44px 40px;width:380px;}
+  .login-logo{text-align:center;margin-bottom:32px;}
+  .login-logo .brand{font-size:20px;font-weight:700;color:var(--navy);letter-spacing:2px;}
+  .login-logo .sub{font-size:13px;color:var(--gray-400);margin-top:4px;}
+  .login-box label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .login-box input[type=text],.login-box input[type=password]{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;color:var(--gray-800);transition:border-color .2s;margin-bottom:18px;}
+  .login-box input:focus{outline:none;border-color:var(--navy);}
+  .login-btn{width:100%;padding:12px;background:var(--navy);color:var(--white);font-size:15px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;letter-spacing:1px;transition:background .2s;}
+  .login-btn:hover{background:var(--navy-light);}
+  .login-err{color:var(--red);font-size:13px;text-align:center;margin-top:12px;}
+
+  /* APP */
+  #app{display:none;min-height:100vh;}
+  .topbar{background:var(--navy);color:var(--white);display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:56px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.18);}
+  .topbar-brand{font-size:15px;font-weight:700;letter-spacing:1.5px;color:var(--gold);}
+  .topbar-user{display:flex;align-items:center;gap:12px;font-size:13px;color:rgba(255,255,255,.8);}
+  .avatar{width:32px;height:32px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:700;font-size:14px;}
+  .logout-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--white);padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;transition:background .2s;}
+  .logout-btn:hover{background:rgba(255,255,255,.22);}
+  .layout{display:flex;min-height:calc(100vh - 56px);}
+  .sidebar{width:220px;background:var(--white);border-right:1px solid var(--gray-200);padding:24px 0;flex-shrink:0;}
+  .sidebar-section{padding:0 16px;margin-bottom:8px;}
+  .sidebar-label{font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:1.5px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;display:block;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);cursor:pointer;font-size:14px;color:var(--gray-600);transition:all .15s;margin-bottom:2px;}
+  .nav-item:hover{background:var(--gray-100);color:var(--navy);}
+  .nav-item.active{background:var(--navy);color:var(--white);font-weight:600;}
+  .nav-item .icon{font-size:16px;width:20px;text-align:center;}
+  .sidebar-divider{height:1px;background:var(--gray-200);margin:12px 16px;}
+  .main{flex:1;padding:28px 32px;overflow-y:auto;}
+
+  /* PAGE */
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+  .page-title{font-size:22px;font-weight:700;color:var(--navy);}
+  .page-subtitle{font-size:13px;color:var(--gray-400);margin-top:2px;}
+  .card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:24px;margin-bottom:20px;}
+  .card-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--gold);display:flex;align-items:center;gap:8px;}
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+  .stat-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:20px;text-align:center;border-top:3px solid var(--gold);}
+  .stat-card.blue{border-top-color:var(--blue);}
+  .stat-card.green{border-top-color:var(--green);}
+  .stat-card.red{border-top-color:var(--red);}
+  .stat-num{font-size:28px;font-weight:800;color:var(--navy);}
+  .stat-label{font-size:12px;color:var(--gray-400);margin-top:4px;}
+
+  /* FORMS */
+  .form-row{display:grid;gap:16px;margin-bottom:16px;}
+  .form-row.cols2{grid-template-columns:1fr 1fr;}
+  .form-row.cols3{grid-template-columns:1fr 1fr 1fr;}
+  .form-group label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;color:var(--gray-800);font-family:inherit;transition:border-color .2s;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--navy);}
+  .form-group textarea{min-height:70px;resize:vertical;}
+
+  /* WEEKLY ITEMS */
+  .wr-item{margin-bottom:12px;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:var(--white);}
+  .wr-item-label{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+  .wr-item textarea{width:100%;border:1px solid var(--gray-200);border-radius:6px;padding:7px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:58px;}
+  .wr-item textarea:focus{outline:none;border-color:var(--gold);}
+
+  /* BUTTONS */
+  .btn{padding:9px 20px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;}
+  .btn-primary{background:var(--navy);color:var(--white);}
+  .btn-primary:hover{background:var(--navy-light);}
+  .btn-gold{background:var(--gold);color:var(--navy);}
+  .btn-gold:hover{background:var(--gold-light);}
+  .btn-outline{background:transparent;color:var(--navy);border:1.5px solid var(--navy);}
+  .btn-outline:hover{background:var(--navy);color:var(--white);}
+  .btn-danger{background:var(--red);color:var(--white);}
+  .btn-sm{padding:5px 12px;font-size:12px;}
+  .btn-green{background:var(--green);color:var(--white);}
+  .btn-green:hover{opacity:.85;}
+
+  /* TABLE */
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:var(--navy);color:var(--white);padding:10px 12px;text-align:left;font-weight:600;font-size:12px;letter-spacing:.3px;}
+  td{padding:10px 12px;border-bottom:1px solid var(--gray-200);color:var(--gray-800);}
+  tr:hover td{background:var(--gray-100);}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-green{background:var(--green-light);color:var(--green);}
+  .badge-red{background:var(--red-light);color:var(--red);}
+  .badge-orange{background:var(--orange-light);color:var(--orange);}
+  .badge-blue{background:var(--blue-light);color:var(--blue);}
+
+  /* TABS */
+  .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--gray-200);}
+  .tab{padding:9px 20px;font-size:13px;font-weight:600;color:var(--gray-400);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}
+  .tab:hover{color:var(--navy);}
+  .tab.active{color:var(--navy);border-bottom-color:var(--gold);}
+
+  /* SECTIONS */
+  .section{display:none;}
+  .section.active{display:block;}
+
+  /* KPI TABLE */
+  .kpi-grid{width:100%;border-collapse:collapse;font-size:12px;}
+  .kpi-grid th{background:var(--navy);color:var(--white);padding:9px 10px;font-size:11px;}
+  .kpi-grid td{padding:9px 10px;border:1px solid var(--gray-200);vertical-align:top;}
+  .kpi-grid tr.kpi-section-hd td{background:#edf1f8;font-weight:700;color:var(--navy);font-size:11px;}
+  .kpi-score-input{width:60px;padding:5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;text-align:center;}
+  .kpi-reflect-input{width:100%;padding:5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:inherit;min-height:48px;resize:vertical;}
+
+  /* HISTORY */
+  .history-tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;background:var(--blue-light);color:var(--blue);font-weight:600;}
+
+  /* NOTIFY */
+  .notify{position:fixed;top:70px;right:20px;background:var(--navy);color:var(--white);padding:12px 20px;border-radius:var(--radius);font-size:13px;box-shadow:var(--shadow-lg);display:none;z-index:999;max-width:300px;}
+  .notify.show{display:block;animation:slideIn .3s;}
+  .notify.success{background:var(--green);}
+  .notify.error{background:var(--red);}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:28px;width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;}
+  .modal-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--gold);}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+
+  /* FILTER BAR */
+  .filter-bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px;padding:16px 20px;background:var(--gray-100);border-radius:var(--radius);}
+  .filter-bar .form-group{margin:0;}
+  .filter-bar label{font-size:11px;}
+  .filter-bar input,.filter-bar select{padding:7px 10px;font-size:13px;}
+
+  /* SUMMARY */
+  .summary-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+  .summary-item{background:var(--white);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border-left:4px solid var(--gold);}
+  .summary-item.done{border-left-color:var(--green);}
+  .summary-item.missing{border-left-color:var(--red);}
+  .summary-item .s-label{font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;}
+  .summary-item .s-value{font-size:20px;font-weight:800;color:var(--navy);margin-top:2px;}
+
+  .admin-only{display:none;}
+
+  @media(max-width:900px){.stats-row{grid-template-columns:1fr 1fr;}.sidebar{width:180px;}.main{padding:20px 16px;}}
+  @media(max-width:640px){.form-row.cols2,.form-row.cols3{grid-template-columns:1fr;}.stats-row{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">財會工作進度小幫手</div>
+      <div class="sub">請登入後使用</div>
+    </div>
+    <label>帳號</label>
+    <input type="text" id="login-user" placeholder="請輸入帳號">
+    <label>密碼</label>
+    <input type="password" id="login-pass" placeholder="請輸入密碼">
+    <button class="login-btn" onclick="doLogin()">登 入</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<div class="notify" id="notify"></div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">財會工作進度小幫手</div>
+    <div class="topbar-user">
+      <div class="avatar" id="avatar-initial">U</div>
+      <span id="topbar-name">—</span>
+      <button class="logout-btn" onclick="doLogout()">登出</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <span class="sidebar-label">主選單</span>
+        <div class="nav-item active" onclick="showSection('dashboard',this)"><span class="icon">📊</span>首頁總覽</div>
+        <div class="nav-item" onclick="showSection('payment',this)"><span class="icon">📄</span>繳單進度</div>
+        <div class="nav-item" onclick="showSection('weekly',this)"><span class="icon">📋</span>週報填寫</div>
+        <div class="nav-item" onclick="showSection('kpi',this)"><span class="icon">🎯</span>月度 KPI</div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <span class="sidebar-label">系統</span>
+        <div class="nav-item admin-only" onclick="showSection('users',this)"><span class="icon">👥</span>帳號管理</div>
+        <div class="nav-item admin-only" onclick="showSection('mailsetting',this)"><span class="icon">✉</span>信箱設定</div>
+        <div class="nav-item admin-only" onclick="showSection('history',this)"><span class="icon">🕐</span>登入歷程</div>
+        <div class="nav-item" onclick="showSection('myhistory',this)"><span class="icon">📅</span>我的紀錄</div>
+      </div>
+    </div>
+
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div class="section active" id="sec-dashboard">
+        <div class="page-header">
+          <div><div class="page-title">首頁總覽</div><div class="page-subtitle" id="dash-date">—</div></div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-num" id="dash-payment-count">0</div><div class="stat-label">本月繳單筆數</div></div>
+          <div class="stat-card green"><div class="stat-num" id="dash-weekly-done">0</div><div class="stat-label">本週已填週報</div></div>
+          <div class="stat-card blue"><div class="stat-num" id="dash-kpi-done">0</div><div class="stat-label">本月已填KPI</div></div>
+          <div class="stat-card red"><div class="stat-num" id="dash-pending">0</div><div class="stat-label">繳單有備註筆數</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📌 最新繳單紀錄</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>區域</th><th>填寫日期</th><th>繳單進度</th><th>備註</th><th>登打者</th></tr></thead>
+            <tbody id="dash-payment-table"><tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">尚無資料</td></tr></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 最新週報</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>填寫者</th><th>週次</th><th>日期範圍</th><th>填寫時間</th><th>狀態</th></tr></thead>
+            <tbody id="dash-weekly-table"><tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">尚無資料</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- PAYMENT -->
+      <div class="section" id="sec-payment">
+        <div class="page-header">
+          <div><div class="page-title">繳單進度</div><div class="page-subtitle">回報各區域繳單進度，可依日期篩選匯總統計</div></div>
+          <button class="btn btn-primary" onclick="openPaymentModal()">＋ 新增繳單紀錄</button>
+        </div>
+        <div class="filter-bar">
+          <div class="form-group"><label>起始日期</label><input type="date" id="filter-date-from" onchange="renderPaymentTable()"></div>
+          <div class="form-group"><label>結束日期</label><input type="date" id="filter-date-to" onchange="renderPaymentTable()"></div>
+          <div class="form-group"><label>區域</label>
+            <select id="filter-area" onchange="renderPaymentTable()">
+              <option value="">全部區域</option>
+              <option>1B</option><option>1F</option><option>1G</option><option>1H</option><option>1E</option><option>1J</option>
+              <option>燦坤</option><option>特力屋</option><option>愛買</option><option>家福</option><option>寶雅</option>
+              <option>2A</option><option>2B</option><option>3A</option><option>3B</option><option>3C</option>
+              <option>5A</option><option>5B</option><option>5C</option><option>5D</option><option>5E</option><option>5F</option><option>5G</option><option>5S</option>
+            </select>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearPaymentFilter()">清除篩選</button>
+          <button class="btn btn-gold btn-sm" onclick="exportPaymentPDF()">⬇ 匯出 PDF</button>
+        </div>
+        <div class="summary-row" id="payment-summary"></div>
+        <div class="card">
+          <div class="card-title">📑 繳單紀錄列表</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>區域</th><th>填寫日期</th><th>繳單進度</th><th>備註</th><th>登打者</th><th>登打時間</th><th>操作</th></tr></thead>
+            <tbody id="payment-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- WEEKLY -->
+      <div class="section" id="sec-weekly">
+        <div class="page-header">
+          <div><div class="page-title">週報填寫</div><div class="page-subtitle">每週工作進度回報，隔週一彙整寄送副理</div></div>
+          <button class="btn btn-primary" onclick="openWeeklyModal()">＋ 填寫本週週報</button>
+        </div>
+        <div class="filter-bar">
+          <div class="form-group"><label>篩選週次</label><input type="week" id="filter-week" onchange="renderWeeklyTable()"></div>
+          <div class="form-group"><label>填寫人員</label>
+            <select id="filter-weekly-user" onchange="renderWeeklyTable()"><option value="">全部人員</option></select>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearWeeklyFilter()">清除</button>
+          <button class="btn btn-gold btn-sm" onclick="exportWeeklyPDF()">⬇ 匯出 PDF</button>
+          <button class="btn btn-green btn-sm" onclick="sendWeeklyMail()">✉ 寄給部門主管</button>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 週報列表</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>填寫者</th><th>週次</th><th>日期範圍</th><th>負責區域核單</th><th>負責收款區域</th><th>特殊狀況</th><th>異常提報</th><th>填寫時間</th><th>操作</th></tr></thead>
+            <tbody id="weekly-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="section" id="sec-kpi">
+        <div class="page-header">
+          <div><div class="page-title">月度 KPI</div><div class="page-subtitle">每月績效考核表，次月1號彙整寄送部門主管</div></div>
+          <button class="btn btn-primary" onclick="openKPIModal()">＋ 填寫本月 KPI</button>
+        </div>
+        <div class="filter-bar">
+          <div class="form-group"><label>月份</label><input type="month" id="filter-kpi-month" onchange="renderKPITable()"></div>
+          <div class="form-group"><label>人員</label>
+            <select id="filter-kpi-user" onchange="renderKPITable()"><option value="">全部人員</option></select>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearKPIFilter()">清除</button>
+          <button class="btn btn-gold btn-sm" onclick="exportKPIPDF()">⬇ 匯出 PDF</button>
+          <button class="btn btn-green btn-sm" onclick="sendKPIMail()">✉ 寄給部門主管</button>
+        </div>
+        <div class="card">
+          <div class="card-title">🎯 KPI 填寫列表</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>姓名</th><th>月份</th><th>帳務品質(40)</th><th>準點率(30)</th><th>回報率(10)</th><th>支援(5)</th><th>優化(10)</th><th>出勤(5)</th><th>自評總分</th><th>評語建議</th><th>填寫時間</th><th>操作</th></tr></thead>
+            <tbody id="kpi-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- USERS (Admin) -->
+      <div class="section admin-only" id="sec-users">
+        <div class="page-header">
+          <div><div class="page-title">帳號管理</div><div class="page-subtitle">管理財會部人員登入帳號</div></div>
+          <button class="btn btn-primary" onclick="openAddUserModal()">＋ 新增帳號</button>
+        </div>
+        <div class="card">
+          <div class="card-title">👥 人員帳號列表</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead>
+            <tbody id="user-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- MAIL SETTING (Admin) -->
+      <div class="section admin-only" id="sec-mailsetting">
+        <div class="page-header"><div><div class="page-title">信箱設定</div><div class="page-subtitle">設定部門主管的收信信箱，週報與KPI彙整時自動帶入</div></div></div>
+        <div class="card" style="max-width:520px">
+          <div class="card-title">✉ 部門主管信箱</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>主管姓名</label>
+              <input type="text" id="manager-name" placeholder="例：王副理">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>主管 Email</label>
+              <input type="email" id="manager-email" placeholder="例：manager@company.com">
+            </div>
+          </div>
+          <div style="margin-top:4px;padding:14px 16px;background:var(--blue-light);border-radius:var(--radius);font-size:13px;color:var(--blue);line-height:1.8">
+            <b>📌 寄信主旨格式說明：</b><br>
+            週報：<code style="background:#fff;padding:2px 6px;border-radius:4px">[財會部週報] YYYY/M/D～M/D｜填寫人：XXX</code><br>
+            KPI：<code style="background:#fff;padding:2px 6px;border-radius:4px">[財會部KPI] YYYY年M月｜填寫人：XXX</code>
+          </div>
+          <div class="modal-footer" style="margin-top:16px;justify-content:flex-start">
+            <button class="btn btn-primary" onclick="saveMailSetting()">儲存設定</button>
+            <span id="mail-setting-status" style="font-size:13px;color:var(--green);margin-left:12px"></span>
+          </div>
+        </div>
+      </div>
+      <div class="section admin-only" id="sec-history">
+        <div class="page-header"><div><div class="page-title">登入歷程</div><div class="page-subtitle">所有人員的登入與登出記錄</div></div></div>
+        <div class="filter-bar">
+          <div class="form-group"><label>篩選日期</label><input type="date" id="filter-history-date" onchange="renderHistoryTable()"></div>
+          <div class="form-group"><label>人員</label>
+            <select id="filter-history-user" onchange="renderHistoryTable()"><option value="">全部人員</option></select>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearHistoryFilter()">清除</button>
+        </div>
+        <div class="card">
+          <div class="card-title">🕐 登入紀錄</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>姓名</th><th>帳號</th><th>登入時間</th><th>登出時間</th><th>操作類型</th></tr></thead>
+            <tbody id="history-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- MY HISTORY -->
+      <div class="section" id="sec-myhistory">
+        <div class="page-header"><div><div class="page-title">我的紀錄</div><div class="page-subtitle">個人登入歷程與操作紀錄</div></div></div>
+        <div class="card">
+          <div class="card-title">📅 我的登入紀錄</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>登入時間</th><th>登出時間</th><th>操作類型</th></tr></thead>
+            <tbody id="my-history-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Payment -->
+<div class="modal-overlay" id="modal-payment">
+  <div class="modal">
+    <div class="modal-title">📄 新增繳單紀錄</div>
+    <div class="form-row cols3">
+      <div class="form-group"><label>區域</label>
+        <select id="pm-area">
+          <option>1B</option><option>1F</option><option>1G</option><option>1H</option><option>1E</option><option>1J</option>
+          <option>燦坤</option><option>特力屋</option><option>愛買</option><option>家福</option><option>寶雅</option>
+          <option>2A</option><option>2B</option><option>3A</option><option>3B</option><option>3C</option>
+          <option>5A</option><option>5B</option><option>5C</option><option>5D</option><option>5E</option><option>5F</option><option>5G</option><option>5S</option>
+        </select>
+      </div>
+      <div class="form-group"><label>填寫日期</label><input type="date" id="pm-fill-date"></div>
+      <div class="form-group"><label>繳單進度（日期至）</label><input type="date" id="pm-date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>備註</label><textarea id="pm-note" placeholder="如：缺S1*1、已完成..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-payment')">取消</button>
+      <button class="btn btn-primary" onclick="savePayment()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Weekly -->
+<div class="modal-overlay" id="modal-weekly">
+  <div class="modal" style="width:640px">
+    <div class="modal-title">📋 填寫本週週報</div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>週次</label><input type="week" id="wr-week" onchange="updateWeekDateRange()"></div>
+      <div class="form-group"><label>日期範圍</label><input type="text" id="wr-daterange" readonly style="background:var(--gray-100)"></div>
+    </div>
+    <div id="wr-items">
+      <div class="wr-item"><div class="wr-item-label">1. 負責區域核單</div><textarea id="wr-1" placeholder="填寫本週負責區域核單內容..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">2. 負責收款區域</div><textarea id="wr-2" placeholder="填寫本週負責收款區域..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">3. 負責核帳區域</div><textarea id="wr-3" placeholder="填寫本週負責核帳區域..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">4. 收到客戶寄回之折讓單正航入帳＋追蹤表 keyin</div><textarea id="wr-4" placeholder="填寫折讓單入帳及追蹤表內容..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">5. 郵寄帳單</div><textarea id="wr-5" placeholder="填寫郵寄帳單情況..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">6. 群獅隨貨開立發票</div><textarea id="wr-6" placeholder="填寫開立發票內容..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">7. 協助其他區域沖帳／核單／核帳</div><textarea id="wr-7" placeholder="填寫協助內容..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">8. 協助其他非例行性工作</div><textarea id="wr-8" placeholder="填寫非例行性工作內容..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">9. 特殊狀況處理</div><textarea id="wr-9" placeholder="如：特休、異常狀況..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">10. 其他</div><textarea id="wr-10" placeholder="其他補充說明..."></textarea></div>
+      <div class="wr-item"><div class="wr-item-label">11. 異常提報</div><textarea id="wr-11" placeholder="日期、原因、自行提報/提報他人..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-weekly')">取消</button>
+      <button class="btn btn-primary" onclick="saveWeekly()">儲存週報</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: KPI -->
+<div class="modal-overlay" id="modal-kpi">
+  <div class="modal" style="width:720px">
+    <div class="modal-title">🎯 填寫本月 KPI 考核表</div>
+    <div class="form-row cols2" style="margin-bottom:16px">
+      <div class="form-group"><label>月份</label><input type="month" id="kpi-month"></div>
+    </div>
+    <table class="kpi-grid" style="margin-bottom:16px">
+      <thead>
+        <tr>
+          <th style="width:90px">項目</th>
+          <th>說明</th>
+          <th style="width:60px;text-align:center">滿分</th>
+          <th style="width:80px;text-align:center">自我評核</th>
+          <th style="width:160px">成員自我反思說明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="kpi-section-hd"><td colspan="5">📌 帳務品質（40%）</td></tr>
+        <tr>
+          <td style="font-weight:600">帳務品質</td>
+          <td style="font-size:11px;color:var(--gray-600);line-height:1.6">
+            <b>應收（含下貨收現）：</b><br>
+            1.發票及折讓單開立正確（內容：日期、抬頭、品項、金額）<br>
+            2.帳單及夾帶發票正確（帳單及發票客戶不一致）<br>
+            3.繳款單審核及書寫正確<br>
+            4.收款正確（如：無支票遺失、現金短缺）<br>
+            5.報表輸入正確　計算方式：一筆扣2分，扣完為止<br>
+            <b>出納：</b><br>
+            1.付款金額錯誤　2.收款異常（支票張數異常、現金短缺）<br>
+            3.繳款日報核對正確　計算方式：1筆扣2分，扣完為止<br>
+            <b>應付（含零用金/總務月結）：</b><br>
+            1.開立折讓單（內容：抬頭、金額）　2.進項發票錯誤，未稽核到<br>
+            3.請款金額錯誤，未稽核到　4.檢查是否有入庫未拋帳<br>
+            扣分基礎：1筆扣2分，扣完為止<br>
+            <b>稅務：</b><br>
+            1.審核憑證異常（憑證錯誤：發票內容、折讓單內容、進出口資料）<br>
+            2.現金、銀行費用請款審核（是否有憑證及正確）　計算方式：1筆扣2分，扣完為止
+          </td>
+          <td style="text-align:center;font-weight:700">40</td>
+          <td style="text-align:center"><input class="kpi-score-input" type="number" id="kpi-quality" min="0" max="40" value="40" oninput="calcKPITotal()"></td>
+          <td><textarea class="kpi-reflect-input" id="kpi-ref-quality" placeholder="請填寫..."></textarea></td>
+        </tr>
+        <tr class="kpi-section-hd"><td colspan="5">⏱ 準點率（30%）</td></tr>
+        <tr>
+          <td style="font-weight:600">準點率</td>
+          <td style="font-size:11px;color:var(--gray-600);line-height:1.6">
+            <b>應收／出納：</b><br>
+            1.帳單準點（次月2日前完成）　2.應收核帳（18日）<br>
+            3.銷項發票核對（每月6日前完成上個月開立發票明細）<br>
+            4.每週一發折讓單未繳回報表及追蹤　5.繳款日報表（次日12點、程式異常不計入）<br>
+            6.主管交辦事項　計算方式：逾期1日扣5分，扣完為止<br>
+            <b>應付：</b><br>
+            1.應付請款（次月20日完成開立支票）<br>
+            2.預付貨款明細表、廠商扣款及退貨明細表（次月25日印出於採購，追蹤採購30日前完成送主管）<br>
+            3.大陸貨款明細表（次月25日完成）　4.三節禮金立帳及報表<br>
+            5.每月勞健保立帳、折舊攤提　6.主管交辦事項<br>
+            計算方式：逾期1日扣5分，扣完為止<br>
+            <b>稅務（應付7日給，預於次月8日完成）：</b><br>
+            1.稅務申報FOR會計師（申報期月份8日）<br>
+            2.稅務憑證KEYIN資料準點（每月抽憑、KEYIN至正航）<br>
+            3.現金、銀存費用請款（下週一付款須於本週三完成，特殊除外）<br>
+            4.主管交辦事項　計算方式：逾期1日扣5分，扣完為止
+          </td>
+          <td style="text-align:center;font-weight:700">30</td>
+          <td style="text-align:center"><input class="kpi-score-input" type="number" id="kpi-ontime" min="0" max="30" value="30" oninput="calcKPITotal()"></td>
+          <td><textarea class="kpi-reflect-input" id="kpi-ref-ontime" placeholder="請填寫..."></textarea></td>
+        </tr>
+        <tr class="kpi-section-hd"><td colspan="5">📢 回報率（10%）</td></tr>
+        <tr>
+          <td style="font-weight:600">回報率</td>
+          <td style="font-size:11px;color:var(--gray-600);line-height:1.6">
+            1.跨部門作業問題未回報1次扣5分<br>
+            2.主管交辦事項未回報1次扣5分<br>
+            3.工作有異常要主動回報，當發現未回報1次扣5分
+          </td>
+          <td style="text-align:center;font-weight:700">10</td>
+          <td style="text-align:center"><input class="kpi-score-input" type="number" id="kpi-report" min="0" max="10" value="10" oninput="calcKPITotal()"></td>
+          <td><textarea class="kpi-reflect-input" id="kpi-ref-report" placeholder="請填寫..."></textarea></td>
+        </tr>
+        <tr class="kpi-section-hd"><td colspan="5">🤝 支援率（5%）</td></tr>
+        <tr>
+          <td style="font-weight:600">支援率</td>
+          <td style="font-size:11px;color:var(--gray-600);line-height:1.6">
+            主動支援其他人員工作或跨部門工作事項（1次加5分）
+          </td>
+          <td style="text-align:center;font-weight:700">5</td>
+          <td style="text-align:center"><input class="kpi-score-input" type="number" id="kpi-support" min="0" max="15" value="5" oninput="calcKPITotal()"></td>
+          <td><textarea class="kpi-reflect-input" id="kpi-ref-support" placeholder="請填寫..."></textarea></td>
+        </tr>
+        <tr class="kpi-section-hd"><td colspan="5">🔄 優化流程（10%）</td></tr>
+        <tr>
+          <td style="font-weight:600">優化流程</td>
+          <td style="font-size:11px;color:var(--gray-600);line-height:1.6">
+            流程改善，優化工作流程作業。（1次加5分，最多10分）
+          </td>
+          <td style="text-align:center;font-weight:700">10</td>
+          <td style="text-align:center"><input class="kpi-score-input" type="number" id="kpi-optimize" min="0" max="10" value="0" oninput="calcKPITotal()"></td>
+          <td><textarea class="kpi-reflect-input" id="kpi-ref-optimize" placeholder="請填寫..."></textarea></td>
+        </tr>
+        <tr class="kpi-section-hd"><td colspan="5">📅 遲到（5%）</td></tr>
+        <tr>
+          <td style="font-weight:600">遲到</td>
+          <td style="font-size:11px;color:var(--gray-600);line-height:1.6">
+            遲到每次扣1.5分，最多扣到5分
+          </td>
+          <td style="text-align:center;font-weight:700">5</td>
+          <td style="text-align:center"><input class="kpi-score-input" type="number" id="kpi-attendance" min="0" max="5" value="5" oninput="calcKPITotal()"></td>
+          <td><textarea class="kpi-reflect-input" id="kpi-ref-attendance" placeholder="請填寫..."></textarea></td>
+        </tr>
+        <tr style="background:#f7f5f0">
+          <td colspan="2" style="font-weight:700;color:var(--navy)">自評總分</td>
+          <td style="text-align:center;font-weight:700;color:var(--gold)">100</td>
+          <td style="text-align:center;font-weight:800;color:var(--navy);font-size:18px" id="kpi-total-display">90</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="form-group">
+      <label>成員對於本月表現進行評語及對部門建議（有成就感的事、希望下次可以改進的部分⋯⋯等等）</label>
+      <textarea id="kpi-reflection" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;" placeholder="請填寫本月心得、成就感的事、希望改進的部分及對部門建議..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-kpi')">取消</button>
+      <button class="btn btn-primary" onclick="saveKPI()">儲存 KPI</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add User -->
+<div class="modal-overlay" id="modal-adduser">
+  <div class="modal" style="width:420px">
+    <div class="modal-title">👤 新增人員帳號</div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>姓名</label><input type="text" id="au-name" placeholder="真實姓名"></div>
+      <div class="form-group"><label>帳號</label><input type="text" id="au-username" placeholder="登入帳號"></div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>密碼</label><input type="password" id="au-pass" placeholder="登入密碼"></div>
+      <div class="form-group"><label>角色</label>
+        <select id="au-role"><option value="user">一般人員</option><option value="admin">管理員</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-adduser')">取消</button>
+      <button class="btn btn-primary" onclick="saveUser()">新增</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  SUPABASE 設定
+// ══════════════════════════════════════════
+const SB_URL = 'https://qpvxnjizirtudtjtwbna.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwdnhuaml6aXJ0dWR0anR3Ym5hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0NjE5NjksImV4cCI6MjA2NTAzNzk2OX0.Ry0sHHQOiHMod3ydFSrOcNiIFCTHLgnpbBiKewDvFt0';
+const SB_HDR = {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Prefer':'return=representation'};
+
+async function sbGet(table,query=''){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?${query}`,{headers:SB_HDR});
+  return r.ok?r.json():[];
+}
+async function sbInsert(table,data){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:SB_HDR,body:JSON.stringify(data)});
+  return r.ok;
+}
+async function sbUpdate(table,id,data){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{method:'PATCH',headers:SB_HDR,body:JSON.stringify(data)});
+  return r.ok;
+}
+async function sbDelete(table,id){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{method:'DELETE',headers:SB_HDR});
+  return r.ok;
+}
+
+const WR_KEYS=['wr-1','wr-2','wr-3','wr-4','wr-5','wr-6','wr-7','wr-8','wr-9','wr-10','wr-11'];
+const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域','收到客戶寄回之折讓單正航入帳+追蹤表keyin','郵寄帳單','群獅隨貨開立發票','協助其他區域沖帳/核單/核帳','協助其他非例行性工作','特殊狀況處理','其他','異常提報'];
+function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
+function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+let currentUser=null;
+let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[]};
+
+// ── LOGIN ──
+async function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value.trim();
+  document.getElementById('login-err').textContent='登入中...';
+  try{
+    const accounts=await sbGet('accounts',`username=eq.${encodeURIComponent(u)}&active=eq.true`);
+    const acc=accounts.find(a=>a.password===p);
+    if(!acc){document.getElementById('login-err').textContent='帳號或密碼錯誤，請重新輸入';return;}
+    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role};
+    await sbInsert('login_logs',{id:pid(),user_id:acc.id,name:acc.name,username:acc.username,login_at:nowStr(),logout_at:null,action:'登入'});
+    await enterApp();
+  }catch(e){document.getElementById('login-err').textContent='連線失敗，請確認網路';}
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin();
+});
+
+async function enterApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('topbar-name').textContent=currentUser.name;
+  document.getElementById('avatar-initial').textContent=currentUser.name.slice(0,1);
+  if(currentUser.role==='admin'){document.querySelectorAll('.admin-only').forEach(el=>el.style.display='flex');}
+  showNotify('資料載入中...','');
+  await loadAllCache();
+  showNotify('載入完成 ✓','success');
+  refreshDash();refreshUserSelects();renderUserTable();renderHistoryTable();renderMyHistory();
+  renderPaymentTable();renderWeeklyTable();renderKPITable();loadMailSetting();
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('zh-TW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+
+async function loadAllCache(){
+  const [payments,weeklies,kpis,loginLogs,accounts]=await Promise.all([
+    sbGet('payments','order=created_at.desc'),
+    sbGet('weeklies','order=created_at.desc'),
+    sbGet('kpis','order=created_at.desc'),
+    sbGet('login_logs','order=login_at.desc&limit=200'),
+    sbGet('accounts','order=created.asc'),
+  ]);
+  CACHE.payments=payments.map(p=>({id:p.id,userId:p.user_id,area:p.area,fillDate:p.fill_date,date:p.date,note:p.note,user:p.user,createdAt:p.created_at}));
+  CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
+  CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
+  CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
+  CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created}));
+}
+
+async function doLogout(){
+  const logs=await sbGet('login_logs',`user_id=eq.${currentUser.id}&logout_at=is.null&limit=1`);
+  if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
+  currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[]};
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').textContent='';
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
+}
+
+// ── NAV ──
+function showSection(id,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='history') renderHistoryTable();
+  if(id==='myhistory') renderMyHistory();
+  if(id==='dashboard') refreshDash();
+}
+
+// ── DASHBOARD ──
+function refreshDash(){
+  const payments=CACHE.payments,weeklies=CACHE.weeklies,kpis=CACHE.kpis;
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const thisWeek=getISOWeek(new Date());
+  const myP=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  const myW=currentUser.role==='admin'?weeklies:weeklies.filter(w=>w.userId===currentUser.id);
+  const myK=currentUser.role==='admin'?kpis:kpis.filter(k=>k.userId===currentUser.id);
+  document.getElementById('dash-payment-count').textContent=myP.filter(p=>p.fillDate&&p.fillDate.startsWith(thisMonth)).length;
+  document.getElementById('dash-weekly-done').textContent=myW.filter(w=>w.week===thisWeek).length;
+  document.getElementById('dash-kpi-done').textContent=myK.filter(k=>k.month===thisMonth).length;
+  document.getElementById('dash-pending').textContent=myP.filter(p=>p.note&&p.note.trim()).length;
+  const pt=document.getElementById('dash-payment-table');
+  const rp=myP.slice(0,5);
+  pt.innerHTML=rp.length?rp.map(p=>`<tr><td><span class="badge badge-blue">${p.area}</span></td><td>${p.fillDate||'—'}</td><td>${p.date||'—'}</td><td>${p.note||'—'}</td><td>${p.user}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">尚無資料</td></tr>';
+  const wt=document.getElementById('dash-weekly-table');
+  const rw=myW.slice(0,5);
+  wt.innerHTML=rw.length?rw.map(w=>`<tr><td>${w.userName}</td><td>${w.week}</td><td>${w.daterange||'—'}</td><td>${w.createdAt}</td><td><span class="badge badge-green">已填寫</span></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">尚無資料</td></tr>';
+}
+
+// ── PAYMENT ──
+function openPaymentModal(){
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('pm-fill-date').value=today;
+  document.getElementById('pm-date').value=today;
+  document.getElementById('pm-note').value='';
+  document.getElementById('modal-payment').classList.add('open');
+}
+async function savePayment(){
+  const area=document.getElementById('pm-area').value;
+  const fillDate=document.getElementById('pm-fill-date').value;
+  const date=document.getElementById('pm-date').value;
+  const note=document.getElementById('pm-note').value.trim();
+  if(!fillDate||!date){showNotify('請選擇填寫日期與繳單進度日期','error');return;}
+  const rec={id:pid(),user_id:currentUser.id,area,fill_date:fillDate,date,note,user:currentUser.name,created_at:nowStr()};
+  const ok=await sbInsert('payments',rec);
+  if(ok){
+    CACHE.payments.unshift({id:rec.id,userId:rec.user_id,area,fillDate,date,note,user:rec.user,createdAt:rec.created_at});
+    closeModal('modal-payment');renderPaymentTable();refreshDash();showNotify('繳單紀錄已儲存 ✓','success');
+  }else{showNotify('儲存失敗，請重試','error');}
+}
+function renderPaymentTable(){
+  const payments=CACHE.payments;
+  const from=document.getElementById('filter-date-from').value;
+  const to=document.getElementById('filter-date-to').value;
+  const area=document.getElementById('filter-area').value;
+  let base=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  let filtered=base.filter(p=>{
+    if(from&&p.fillDate<from)return false;
+    if(to&&p.fillDate>to)return false;
+    if(area&&p.area!==area)return false;
+    return true;
+  });
+  const areas=[...new Set(filtered.map(p=>p.area))];
+  document.getElementById('payment-summary').innerHTML=`<div class="summary-item"><div class="s-label">總筆數</div><div class="s-value">${filtered.length}</div></div><div class="summary-item done"><div class="s-label">區域數</div><div class="s-value">${areas.length}</div></div><div class="summary-item missing"><div class="s-label">有備註筆數</div><div class="s-value">${filtered.filter(p=>p.note).length}</div></div>`;
+  const tb=document.getElementById('payment-table');
+  tb.innerHTML=filtered.length?filtered.map(p=>`<tr><td><span class="badge badge-blue">${p.area}</span></td><td>${p.fillDate||'—'}</td><td>${p.date||'—'}</td><td>${p.note?`<span class="badge badge-orange">${p.note}</span>`:'<span style="color:var(--gray-400)">—</span>'}</td><td>${p.user}</td><td>${p.createdAt}</td><td><button class="btn btn-sm btn-danger" onclick="deleteRecord('payments','${p.id}',renderPaymentTable)">刪除</button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:30px">尚無符合條件的紀錄</td></tr>';
+}
+function clearPaymentFilter(){
+  ['filter-date-from','filter-date-to'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('filter-area').value='';renderPaymentTable();
+}
+
+// ── WEEKLY ──
+function getISOWeek(d){
+  const date=new Date(d);date.setHours(0,0,0,0);
+  date.setDate(date.getDate()+3-(date.getDay()+6)%7);
+  const w1=new Date(date.getFullYear(),0,4);
+  const wn=1+Math.round(((date-w1)/86400000-3+(w1.getDay()+6)%7)/7);
+  return `${date.getFullYear()}-W${String(wn).padStart(2,'0')}`;
+}
+function updateWeekDateRange(){
+  const wv=document.getElementById('wr-week').value;if(!wv)return;
+  const[y,w]=wv.split('-W');
+  const d=new Date(+y,0,1+(w-1)*7);
+  const day=d.getDay();
+  const mon=new Date(d);mon.setDate(d.getDate()-(day===0?6:day-1));
+  const fri=new Date(mon);fri.setDate(mon.getDate()+4);
+  const fmt=dt=>`${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+  document.getElementById('wr-daterange').value=`${fmt(mon)}-${fmt(fri)}`;
+}
+function openWeeklyModal(){
+  document.getElementById('wr-week').value=getISOWeek(new Date());
+  updateWeekDateRange();
+  WR_KEYS.forEach(k=>{const el=document.getElementById(k);if(el)el.value='';});
+  document.getElementById('modal-weekly').classList.add('open');
+}
+async function saveWeekly(){
+  const week=document.getElementById('wr-week').value;
+  if(!week){showNotify('請選擇週次','error');return;}
+  const items={};
+  WR_KEYS.forEach((k,i)=>{items['f'+(i+1)]=document.getElementById(k).value.trim();});
+  const rec={id:pid(),user_id:currentUser.id,user_name:currentUser.name,week,daterange:document.getElementById('wr-daterange').value,f1:items.f1,f2:items.f2,f3:items.f3,f4:items.f4,f5:items.f5,f6:items.f6,f7:items.f7,f8:items.f8,f9:items.f9,f10:items.f10,f11:items.f11,created_at:nowStr()};
+  const ok=await sbInsert('weeklies',rec);
+  if(ok){
+    CACHE.weeklies.unshift({id:rec.id,userId:rec.user_id,userName:rec.user_name,week:rec.week,daterange:rec.daterange,f1:rec.f1,f2:rec.f2,f3:rec.f3,f4:rec.f4,f5:rec.f5,f6:rec.f6,f7:rec.f7,f8:rec.f8,f9:rec.f9,f10:rec.f10,f11:rec.f11,createdAt:rec.created_at});
+    closeModal('modal-weekly');renderWeeklyTable();refreshDash();showNotify('週報已儲存 ✓','success');
+  }else{showNotify('儲存失敗，請重試','error');}
+}
+function renderWeeklyTable(){
+  const weeklies=CACHE.weeklies;
+  const wk=document.getElementById('filter-week').value;
+  const uid=document.getElementById('filter-weekly-user').value;
+  let base=currentUser.role==='admin'?weeklies:weeklies.filter(w=>w.userId===currentUser.id);
+  let filtered=base.filter(w=>{if(wk&&w.week!==wk)return false;if(uid&&w.userId!==uid)return false;return true;});
+  const tb=document.getElementById('weekly-table');
+  tb.innerHTML=filtered.length?filtered.map(w=>`<tr><td>${w.userName}</td><td>${w.week}</td><td>${w.daterange||'—'}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${w.f1||''}">${w.f1||'—'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${w.f2||''}">${w.f2||'—'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${w.f9||''}">${w.f9||'—'}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${w.f11||''}">${w.f11||'—'}</td><td>${w.createdAt}</td><td><button class="btn btn-sm btn-danger" onclick="deleteRecord('weeklies','${w.id}',renderWeeklyTable)">刪除</button></td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--gray-400);padding:30px">尚無週報資料</td></tr>';
+}
+function clearWeeklyFilter(){
+  document.getElementById('filter-week').value='';document.getElementById('filter-weekly-user').value='';renderWeeklyTable();
+}
+function sendWeeklyMail(){
+  const weeklies=CACHE.weeklies;
+  const wk=document.getElementById('filter-week').value||getISOWeek(new Date());
+  const filtered=weeklies.filter(w=>w.week===wk);
+  if(!filtered.length){showNotify('該週次尚無週報資料','error');return;}
+  const mailSetting=JSON.parse(localStorage.getItem('mailSetting')||'{}');
+  const toEmail=mailSetting.email||'';
+  const names=filtered.map(w=>w.userName).join('、');
+  const dateRange=filtered[0].daterange||weekToDateRange(wk);
+  const subjText=`[財會部週報] ${dateRange}｜填寫人：${names}`;
+  const fileName=`週報_${dateRange.replace(/～/,'-')}.pdf`;
+  exportWeeklyPDF();
+  setTimeout(()=>{
+    const bodyText=`您好，\n\n附件為財會部 ${dateRange} 週報，請查收。\n（PDF 檔名：${fileName}，請手動附加至此信件後寄出）\n\n填寫人員：${names}\n\n此致\n財會部`;
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${encodeURIComponent(subjText)}&body=${encodeURIComponent(bodyText)}`,'_blank');
+    showNotify('PDF 已下載，Gmail 已開啟，請附加 PDF 後送出','success');
+  },1000);
+}
+
+// ── KPI ──
+function calcKPITotal(){
+  const ids=['kpi-quality','kpi-ontime','kpi-report','kpi-support','kpi-optimize','kpi-attendance'];
+  const total=ids.reduce((s,id)=>s+(parseInt(document.getElementById(id).value)||0),0);
+  document.getElementById('kpi-total-display').textContent=total;
+}
+function openKPIModal(){
+  const n=new Date();
+  document.getElementById('kpi-month').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('kpi-quality').value=40;document.getElementById('kpi-ontime').value=30;
+  document.getElementById('kpi-report').value=10;document.getElementById('kpi-support').value=5;
+  document.getElementById('kpi-optimize').value=0;document.getElementById('kpi-attendance').value=5;
+  calcKPITotal();
+  ['kpi-reflection','kpi-ref-quality','kpi-ref-ontime','kpi-ref-report','kpi-ref-support','kpi-ref-optimize','kpi-ref-attendance'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('modal-kpi').classList.add('open');
+}
+async function saveKPI(){
+  const month=document.getElementById('kpi-month').value;
+  if(!month){showNotify('請選擇月份','error');return;}
+  const quality=parseInt(document.getElementById('kpi-quality').value)||0;
+  const ontime=parseInt(document.getElementById('kpi-ontime').value)||0;
+  const report=parseInt(document.getElementById('kpi-report').value)||0;
+  const support=parseInt(document.getElementById('kpi-support').value)||0;
+  const optimize=parseInt(document.getElementById('kpi-optimize').value)||0;
+  const attendance=parseInt(document.getElementById('kpi-attendance').value)||0;
+  const total=quality+ontime+report+support+optimize+attendance;
+  const rec={id:pid(),user_id:currentUser.id,user_name:currentUser.name,month,quality,ontime,report,support,optimize,attendance,total,ref_quality:document.getElementById('kpi-ref-quality').value.trim(),ref_ontime:document.getElementById('kpi-ref-ontime').value.trim(),ref_report:document.getElementById('kpi-ref-report').value.trim(),ref_support:document.getElementById('kpi-ref-support').value.trim(),ref_optimize:document.getElementById('kpi-ref-optimize').value.trim(),ref_attendance:document.getElementById('kpi-ref-attendance').value.trim(),reflection:document.getElementById('kpi-reflection').value.trim(),created_at:nowStr()};
+  const ok=await sbInsert('kpis',rec);
+  if(ok){
+    CACHE.kpis.unshift({id:rec.id,userId:rec.user_id,userName:rec.user_name,month,quality,ontime,report,support,optimize,attendance,total,refQuality:rec.ref_quality,refOntime:rec.ref_ontime,refReport:rec.ref_report,refSupport:rec.ref_support,refOptimize:rec.ref_optimize,refAttendance:rec.ref_attendance,reflection:rec.reflection,createdAt:rec.created_at});
+    closeModal('modal-kpi');renderKPITable();refreshDash();showNotify('KPI 已儲存 ✓','success');
+  }else{showNotify('儲存失敗，請重試','error');}
+}
+function renderKPITable(){
+  const kpis=CACHE.kpis;
+  const month=document.getElementById('filter-kpi-month').value;
+  const uid=document.getElementById('filter-kpi-user').value;
+  let base=currentUser.role==='admin'?kpis:kpis.filter(k=>k.userId===currentUser.id);
+  let filtered=base.filter(k=>{if(month&&k.month!==month)return false;if(uid&&k.userId!==uid)return false;return true;});
+  const tb=document.getElementById('kpi-table');
+  tb.innerHTML=filtered.length?filtered.map(k=>{
+    const cls=k.total>=85?'badge-green':k.total>=75?'badge-blue':'badge-red';
+    return `<tr><td>${k.userName}</td><td>${k.month}</td><td style="text-align:center">${k.quality}</td><td style="text-align:center">${k.ontime}</td><td style="text-align:center">${k.report}</td><td style="text-align:center">${k.support}</td><td style="text-align:center">${k.optimize}</td><td style="text-align:center">${k.attendance}</td><td style="text-align:center"><span class="badge ${cls}">${k.total}</span></td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${k.reflection||''}">${k.reflection||'—'}</td><td>${k.createdAt}</td><td><button class="btn btn-sm btn-danger" onclick="deleteRecord('kpis','${k.id}',renderKPITable)">刪除</button></td></tr>`;
+  }).join(''):'<tr><td colspan="12" style="text-align:center;color:var(--gray-400);padding:30px">尚無KPI資料</td></tr>';
+}
+function clearKPIFilter(){
+  document.getElementById('filter-kpi-month').value='';document.getElementById('filter-kpi-user').value='';renderKPITable();
+}
+function sendKPIMail(){
+  const kpis=CACHE.kpis;
+  const month=document.getElementById('filter-kpi-month').value||new Date().toISOString().slice(0,7);
+  const filtered=kpis.filter(k=>k.month===month);
+  if(!filtered.length){showNotify('該月份尚無KPI資料','error');return;}
+  const mailSetting=JSON.parse(localStorage.getItem('mailSetting')||'{}');
+  const toEmail=mailSetting.email||'';
+  const names=filtered.map(k=>k.userName).join('、');
+  const [y,m]=month.split('-');
+  const monthLabel=`${y}年${parseInt(m)}月`;
+  const subjText=`[財會部KPI] ${monthLabel}｜填寫人：${names}`;
+  const fileName=`KPI考核表_${month}.pdf`;
+  exportKPIPDF();
+  setTimeout(()=>{
+    const bodyText=`您好，\n\n附件為財會部 ${monthLabel} KPI 考核表，請查收。\n（PDF 檔名：${fileName}，請手動附加至此信件後寄出）\n\n填寫人員：${names}\n\n此致\n財會部`;
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${encodeURIComponent(subjText)}&body=${encodeURIComponent(bodyText)}`,'_blank');
+    showNotify('PDF 已下載，Gmail 已開啟，請附加 PDF 後送出','success');
+  },1000);
+}
+
+// ── USERS ──
+function openAddUserModal(){
+  ['au-name','au-username','au-pass'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('au-role').value='user';
+  document.getElementById('modal-adduser').classList.add('open');
+}
+async function saveUser(){
+  const name=document.getElementById('au-name').value.trim();
+  const username=document.getElementById('au-username').value.trim();
+  const password=document.getElementById('au-pass').value.trim();
+  const role=document.getElementById('au-role').value;
+  if(!name||!username||!password){showNotify('請填寫完整資料','error');return;}
+  if(CACHE.accounts.find(a=>a.username===username)){showNotify('帳號已存在','error');return;}
+  const rec={id:pid(),name,username,password,role,active:true,created:nowStr()};
+  const ok=await sbInsert('accounts',rec);
+  if(ok){
+    CACHE.accounts.push(rec);
+    closeModal('modal-adduser');renderUserTable();refreshUserSelects();showNotify(`已新增帳號：${name}`,'success');
+  }else{showNotify('新增失敗，請重試','error');}
+}
+function renderUserTable(){
+  const accounts=CACHE.accounts;
+  document.getElementById('user-table').innerHTML=accounts.map(a=>`<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td>${a.created}</td><td><button class="btn btn-sm btn-outline" onclick="toggleUserActive('${a.id}',${!a.active})">${a.active?'停用':'啟用'}</button></td></tr>`).join('');
+}
+async function toggleUserActive(id,active){
+  const ok=await sbUpdate('accounts',id,{active});
+  if(ok){const a=CACHE.accounts.find(a=>a.id===id);if(a){a.active=active;renderUserTable();}}
+}
+function refreshUserSelects(){
+  const accounts=CACHE.accounts;
+  let opts;
+  if(currentUser&&currentUser.role==='admin'){
+    opts='<option value="">全部人員</option>'+accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  }else{
+    opts=`<option value="${currentUser.id}">${currentUser.name}</option>`;
+  }
+  ['filter-weekly-user','filter-kpi-user','filter-history-user'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+}
+
+// ── HISTORY ──
+function renderHistoryTable(){
+  const logs=CACHE.loginLogs;
+  const date=document.getElementById('filter-history-date')?.value;
+  const uid=document.getElementById('filter-history-user')?.value;
+  let filtered=logs.filter(l=>{if(date&&!l.loginAt.startsWith(date.replace(/-/g,'/')))return false;if(uid&&l.userId!==uid)return false;return true;});
+  const tb=document.getElementById('history-table');
+  tb.innerHTML=filtered.length?filtered.map(l=>`<tr><td>${l.name}</td><td>${l.username}</td><td>${l.loginAt}</td><td>${l.logoutAt||'—'}</td><td><span class="history-tag">${l.action}</span></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">尚無紀錄</td></tr>';
+}
+function clearHistoryFilter(){
+  document.getElementById('filter-history-date').value='';document.getElementById('filter-history-user').value='';renderHistoryTable();
+}
+function renderMyHistory(){
+  const logs=CACHE.loginLogs.filter(l=>l.userId===currentUser?.id);
+  const tb=document.getElementById('my-history-table');
+  tb.innerHTML=logs.length?logs.map(l=>`<tr><td>${l.loginAt}</td><td>${l.logoutAt||'—'}</td><td><span class="history-tag">${l.action}</span></td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:24px">尚無紀錄</td></tr>';
+}
+
+// ── MAIL SETTING ──
+function saveMailSetting(){
+  const name=document.getElementById('manager-name').value.trim();
+  const email=document.getElementById('manager-email').value.trim();
+  localStorage.setItem('mailSetting',JSON.stringify({name,email}));
+  document.getElementById('mail-setting-status').textContent='✓ 已儲存';
+  setTimeout(()=>document.getElementById('mail-setting-status').textContent='',2500);
+}
+function loadMailSetting(){
+  const s=JSON.parse(localStorage.getItem('mailSetting')||'{}');
+  const n=document.getElementById('manager-name');const e=document.getElementById('manager-email');
+  if(n)n.value=s.name||'';if(e)e.value=s.email||'';
+}
+
+// ── 刪除 ──
+async function deleteRecord(table,id,cb){
+  if(!confirm('確定要刪除此筆紀錄？'))return;
+  const ok=await sbDelete(table,id);
+  if(ok){
+    const cacheKey=table==='login_logs'?'loginLogs':table;
+    CACHE[cacheKey]=CACHE[cacheKey].filter(r=>r.id!==id);
+    cb();refreshDash();
+  }else{showNotify('刪除失敗','error');}
+}
+
+// ── HELPERS ──
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});
+});
+function showNotify(msg,type=''){
+  const el=document.getElementById('notify');
+  el.textContent=msg;el.className='notify show'+(type?' '+type:'');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>
