@@ -245,6 +245,13 @@
           <div><div class="page-title">繳單進度</div><div class="page-subtitle">回報各區域繳單進度，可依日期篩選匯總統計</div></div>
           <button class="btn btn-primary" onclick="openPaymentModal()">＋ 新增繳單紀錄</button>
         </div>
+
+        <!-- 頁簽 -->
+        <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--gray-200)">
+          <div id="tab-monthly" onclick="switchPaymentTab('monthly')" style="padding:9px 28px;font-size:14px;font-weight:700;cursor:pointer;border-bottom:3px solid var(--gold);margin-bottom:-2px;color:var(--navy)">月　結</div>
+          <div id="tab-transfer" onclick="switchPaymentTab('transfer')" style="padding:9px 28px;font-size:14px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--gray-400)">20 轉月</div>
+        </div>
+
         <div class="filter-bar">
           <div class="form-group"><label>起始日期</label><input type="date" id="filter-date-from" onchange="renderPaymentTable()"></div>
           <div class="form-group"><label>結束日期</label><input type="date" id="filter-date-to" onchange="renderPaymentTable()"></div>
@@ -262,7 +269,7 @@
         </div>
         <div class="summary-row" id="payment-summary"></div>
         <div class="card">
-          <div class="card-title">📑 繳單紀錄列表</div>
+          <div class="card-title" id="payment-card-title">📑 月結 繳單紀錄列表</div>
           <div class="table-wrap"><table>
             <thead><tr><th>區域</th><th>填寫日期</th><th>繳單進度</th><th>備註</th><th>登打者</th><th>登打時間</th><th>操作</th></tr></thead>
             <tbody id="payment-table"></tbody>
@@ -430,8 +437,20 @@
 
 <!-- MODAL: Payment -->
 <div class="modal-overlay" id="modal-payment">
-  <div class="modal" style="width:600px">
+  <div class="modal" style="width:620px">
     <div class="modal-title">📄 新增繳單紀錄</div>
+
+    <!-- 頁簽選擇 -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="modal-tab-monthly" onclick="switchModalTab('monthly')"
+        style="flex:1;padding:9px;border-radius:var(--radius);font-size:14px;font-weight:700;cursor:pointer;border:2px solid var(--navy);background:var(--navy);color:#fff;transition:all .15s">
+        月　結
+      </button>
+      <button id="modal-tab-transfer" onclick="switchModalTab('transfer')"
+        style="flex:1;padding:9px;border-radius:var(--radius);font-size:14px;font-weight:700;cursor:pointer;border:2px solid var(--gray-200);background:#fff;color:var(--gray-400);transition:all .15s">
+        20 轉月
+      </button>
+    </div>
 
     <!-- 填寫日期（共用） -->
     <div class="form-row cols2" style="margin-bottom:12px">
@@ -757,6 +776,34 @@ function refreshDash(){
 // ── PAYMENT ──
 const AREA_OPTIONS = ['1B','1F','1G','1H','1E','1J','燦坤','特力屋','愛買','家福','寶雅','2A','2B','3A','3B','3C','5A','5B','5C','5D','5E','5F','5G','5S'];
 let areaRowCount = 0;
+let currentPaymentType = 'monthly'; // 'monthly' | 'transfer'
+let currentModalType = 'monthly';
+
+// 頁面頁簽切換
+function switchPaymentTab(type){
+  currentPaymentType = type;
+  const isMonthly = type === 'monthly';
+  document.getElementById('tab-monthly').style.borderBottomColor = isMonthly ? 'var(--gold)' : 'transparent';
+  document.getElementById('tab-monthly').style.color = isMonthly ? 'var(--navy)' : 'var(--gray-400)';
+  document.getElementById('tab-transfer').style.borderBottomColor = !isMonthly ? 'var(--gold)' : 'transparent';
+  document.getElementById('tab-transfer').style.color = !isMonthly ? 'var(--navy)' : 'var(--gray-400)';
+  document.getElementById('payment-card-title').textContent = isMonthly ? '📑 月結 繳單紀錄列表' : '📑 20轉月 繳單紀錄列表';
+  renderPaymentTable();
+}
+
+// Modal 頁簽切換
+function switchModalTab(type){
+  currentModalType = type;
+  const isMonthly = type === 'monthly';
+  const mBtn = document.getElementById('modal-tab-monthly');
+  const tBtn = document.getElementById('modal-tab-transfer');
+  mBtn.style.background = isMonthly ? 'var(--navy)' : '#fff';
+  mBtn.style.color = isMonthly ? '#fff' : 'var(--gray-400)';
+  mBtn.style.borderColor = isMonthly ? 'var(--navy)' : 'var(--gray-200)';
+  tBtn.style.background = !isMonthly ? 'var(--navy)' : '#fff';
+  tBtn.style.color = !isMonthly ? '#fff' : 'var(--gray-400)';
+  tBtn.style.borderColor = !isMonthly ? 'var(--navy)' : 'var(--gray-200)';
+}
 
 function areaSelectHTML(id, defaultVal=''){
   return `<select id="${id}" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
@@ -794,7 +841,6 @@ function addAreaRow(defaultArea=''){
 function removeAreaRow(id){
   const el = document.getElementById(`pm-row-${id}`);
   if(el) el.remove();
-  // 至少保留一列
   if(document.getElementById('pm-area-list').children.length === 0) addAreaRow();
 }
 
@@ -803,15 +849,16 @@ function openPaymentModal(){
   document.getElementById('pm-fill-date').value = today;
   document.getElementById('pm-area-list').innerHTML = '';
   areaRowCount = 0;
-  addAreaRow(); // 預設一列
+  // 預設與目前頁簽一致
+  currentModalType = currentPaymentType;
+  switchModalTab(currentModalType);
+  addAreaRow();
   document.getElementById('modal-payment').classList.add('open');
 }
 
 async function savePayment(){
   const fillDate = document.getElementById('pm-fill-date').value;
   if(!fillDate){showNotify('請選擇填寫日期','error');return;}
-
-  // 收集所有列的資料
   const rows = [];
   const list = document.getElementById('pm-area-list');
   for(const div of list.children){
@@ -823,21 +870,20 @@ async function savePayment(){
     rows.push({area, date, note});
   }
   if(rows.length===0){showNotify('請至少新增一個區域','error');return;}
-
-  // 逐筆儲存
   let successCount = 0;
   for(const row of rows){
-    const rec={id:pid(),user_id:currentUser.id,area:row.area,fill_date:fillDate,date:row.date,note:row.note,user:currentUser.name,created_at:nowStr()};
+    const rec={id:pid(),user_id:currentUser.id,area:row.area,fill_date:fillDate,date:row.date,note:row.note,payment_type:currentModalType,user:currentUser.name,created_at:nowStr()};
     const ok=await sbInsert('payments',rec);
     if(ok){
-      CACHE.payments.unshift({id:rec.id,userId:rec.user_id,area:row.area,fillDate,date:row.date,note:row.note,user:rec.user,createdAt:rec.created_at});
+      CACHE.payments.unshift({id:rec.id,userId:rec.user_id,area:row.area,fillDate,date:row.date,note:row.note,paymentType:currentModalType,user:rec.user,createdAt:rec.created_at});
       successCount++;
     }
   }
   closeModal('modal-payment');
   renderPaymentTable();
   refreshDash();
-  showNotify(`已儲存 ${successCount} 筆繳單紀錄 ✓`,'success');
+  const typeLabel = currentModalType==='monthly'?'月結':'20轉月';
+  showNotify(`【${typeLabel}】已儲存 ${successCount} 筆繳單紀錄 ✓`,'success');
 }
 function renderPaymentTable(){
   const payments=CACHE.payments;
@@ -845,6 +891,8 @@ function renderPaymentTable(){
   const to=document.getElementById('filter-date-to').value;
   const area=document.getElementById('filter-area').value;
   let base=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  // 依目前頁簽篩選類型
+  base = base.filter(p=>(p.paymentType||'monthly')===currentPaymentType);
   let filtered=base.filter(p=>{
     if(from&&p.fillDate<from)return false;
     if(to&&p.fillDate>to)return false;
@@ -1182,6 +1230,8 @@ function exportPaymentPDF(){
   const to=document.getElementById('filter-date-to').value;
   const areaFilter=document.getElementById('filter-area').value;
   let base=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  // 依目前頁簽篩選
+  base = base.filter(p=>(p.paymentType||'monthly')===currentPaymentType);
   const targetAreas=areaFilter?[areaFilter]:ALL_AREAS;
   const refDate=from||to||new Date().toISOString().split('T')[0];
   const refYear=refDate.slice(0,4);
@@ -1200,8 +1250,9 @@ function exportPaymentPDF(){
   const doc=new jsPDF('p','mm','a4');
   const PAGE_W=210,MARGIN=10,TABLE_W=PAGE_W-MARGIN*2;
   const HDR_H=11,ROW_H=8.5,FS_BODY=10;
+  const typeLabel=currentPaymentType==='monthly'?'月結':'20轉月';
   let y=12;
-  pdfText(doc,'展晟財會部 繳單進度報表',MARGIN,y,TABLE_W,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=22;
+  pdfText(doc,`展晟財會部 繳單進度報表【${typeLabel}】`,MARGIN,y,TABLE_W,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=22;
   pdfText(doc,`查詢月份：${refYear}年${parseInt(refMonth)}月　　列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=9;
   const cols=[{x:MARGIN,w:22,label:'區　域'},{x:MARGIN+22,w:32,label:'繳單進度'},{x:MARGIN+54,w:98,label:'備　　　　　　　　　　　　　　　　　　　註'},{x:MARGIN+152,w:38,label:'回　報　者'}];
   doc.setFillColor(26,39,68);doc.rect(MARGIN,y,TABLE_W,HDR_H,'F');
@@ -1224,7 +1275,8 @@ function exportPaymentPDF(){
   y+=3;
   if(medianDate){pdfText(doc,`※ 繳單日期中間值：${fmtMD(medianDate)}　低於中間值以紅色粗體標示`,MARGIN,y,TABLE_W,5,{fs:8,color:'#b83232'});y+=6;}
   pdfText(doc,`共 ${rows.filter(r=>!r.missing).length} 個區域已回報／${rows.filter(r=>r.missing).length} 個未繳單`,MARGIN,y,TABLE_W,5,{fs:8,color:'#666'});
-  doc.save('繳單進度報表.pdf');showNotify('PDF 已下載','success');
+  doc.save(`繳單進度報表_${typeLabel}_${refYear}${refMonth}.pdf`);
+  showNotify(`【${typeLabel}】PDF 已下載`,'success');
 }
 
 // ── 週報 PDF ──
