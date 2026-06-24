@@ -430,26 +430,25 @@
 
 <!-- MODAL: Payment -->
 <div class="modal-overlay" id="modal-payment">
-  <div class="modal">
+  <div class="modal" style="width:600px">
     <div class="modal-title">📄 新增繳單紀錄</div>
-    <div class="form-row cols3">
-      <div class="form-group"><label>區域</label>
-        <select id="pm-area">
-          <option>1B</option><option>1F</option><option>1G</option><option>1H</option><option>1E</option><option>1J</option>
-          <option>燦坤</option><option>特力屋</option><option>愛買</option><option>家福</option><option>寶雅</option>
-          <option>2A</option><option>2B</option><option>3A</option><option>3B</option><option>3C</option>
-          <option>5A</option><option>5B</option><option>5C</option><option>5D</option><option>5E</option><option>5F</option><option>5G</option><option>5S</option>
-        </select>
-      </div>
+
+    <!-- 填寫日期（共用） -->
+    <div class="form-row cols2" style="margin-bottom:12px">
       <div class="form-group"><label>填寫日期</label><input type="date" id="pm-fill-date"></div>
-      <div class="form-group"><label>繳單進度（日期至）</label><input type="date" id="pm-date"></div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>備註</label><textarea id="pm-note" placeholder="如：缺S1*1、已完成..."></textarea></div>
-    </div>
+
+    <!-- 多區域列表 -->
+    <div id="pm-area-list"></div>
+
+    <!-- 新增區域按鈕 -->
+    <button class="btn btn-outline btn-sm" style="margin-bottom:16px;color:var(--blue);border-color:var(--blue)" onclick="addAreaRow()">
+      ＋ 新增區域
+    </button>
+
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-payment')">取消</button>
-      <button class="btn btn-primary" onclick="savePayment()">儲存</button>
+      <button class="btn btn-primary" onclick="savePayment()">全部儲存</button>
     </div>
   </div>
 </div>
@@ -756,25 +755,89 @@ function refreshDash(){
 }
 
 // ── PAYMENT ──
+const AREA_OPTIONS = ['1B','1F','1G','1H','1E','1J','燦坤','特力屋','愛買','家福','寶雅','2A','2B','3A','3B','3C','5A','5B','5C','5D','5E','5F','5G','5S'];
+let areaRowCount = 0;
+
+function areaSelectHTML(id, defaultVal=''){
+  return `<select id="${id}" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+    ${AREA_OPTIONS.map(a=>`<option${a===defaultVal?' selected':''}>${a}</option>`).join('')}
+  </select>`;
+}
+
+function addAreaRow(defaultArea=''){
+  areaRowCount++;
+  const id = areaRowCount;
+  const today = new Date().toISOString().split('T')[0];
+  const list = document.getElementById('pm-area-list');
+  const div = document.createElement('div');
+  div.id = `pm-row-${id}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:10px;align-items:end;margin-bottom:10px;padding:12px;background:var(--gray-100);border-radius:var(--radius)';
+  div.innerHTML = `
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-600);margin-bottom:5px;text-transform:uppercase">區域</label>
+      ${areaSelectHTML(`pm-area-${id}`, defaultArea||AREA_OPTIONS[0])}
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-600);margin-bottom:5px;text-transform:uppercase">繳單進度（日期至）</label>
+      <input type="date" id="pm-date-${id}" value="${today}" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--gray-600);margin-bottom:5px;text-transform:uppercase">備註</label>
+      <input type="text" id="pm-note-${id}" placeholder="如：缺S1*1、已完成..." style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+    </div>
+    <div style="padding-bottom:1px">
+      <button onclick="removeAreaRow(${id})" style="padding:8px 10px;background:var(--red-light);color:var(--red);border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:600" title="移除此列">✕</button>
+    </div>`;
+  list.appendChild(div);
+}
+
+function removeAreaRow(id){
+  const el = document.getElementById(`pm-row-${id}`);
+  if(el) el.remove();
+  // 至少保留一列
+  if(document.getElementById('pm-area-list').children.length === 0) addAreaRow();
+}
+
 function openPaymentModal(){
-  const today=new Date().toISOString().split('T')[0];
-  document.getElementById('pm-fill-date').value=today;
-  document.getElementById('pm-date').value=today;
-  document.getElementById('pm-note').value='';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('pm-fill-date').value = today;
+  document.getElementById('pm-area-list').innerHTML = '';
+  areaRowCount = 0;
+  addAreaRow(); // 預設一列
   document.getElementById('modal-payment').classList.add('open');
 }
+
 async function savePayment(){
-  const area=document.getElementById('pm-area').value;
-  const fillDate=document.getElementById('pm-fill-date').value;
-  const date=document.getElementById('pm-date').value;
-  const note=document.getElementById('pm-note').value.trim();
-  if(!fillDate||!date){showNotify('請選擇填寫日期與繳單進度日期','error');return;}
-  const rec={id:pid(),user_id:currentUser.id,area,fill_date:fillDate,date,note,user:currentUser.name,created_at:nowStr()};
-  const ok=await sbInsert('payments',rec);
-  if(ok){
-    CACHE.payments.unshift({id:rec.id,userId:rec.user_id,area,fillDate,date,note,user:rec.user,createdAt:rec.created_at});
-    closeModal('modal-payment');renderPaymentTable();refreshDash();showNotify('繳單紀錄已儲存 ✓','success');
-  }else{showNotify('儲存失敗，請重試','error');}
+  const fillDate = document.getElementById('pm-fill-date').value;
+  if(!fillDate){showNotify('請選擇填寫日期','error');return;}
+
+  // 收集所有列的資料
+  const rows = [];
+  const list = document.getElementById('pm-area-list');
+  for(const div of list.children){
+    const rid = div.id.replace('pm-row-','');
+    const area = document.getElementById(`pm-area-${rid}`)?.value;
+    const date = document.getElementById(`pm-date-${rid}`)?.value;
+    const note = document.getElementById(`pm-note-${rid}`)?.value.trim()||'';
+    if(!date){showNotify('請填寫所有繳單進度日期','error');return;}
+    rows.push({area, date, note});
+  }
+  if(rows.length===0){showNotify('請至少新增一個區域','error');return;}
+
+  // 逐筆儲存
+  let successCount = 0;
+  for(const row of rows){
+    const rec={id:pid(),user_id:currentUser.id,area:row.area,fill_date:fillDate,date:row.date,note:row.note,user:currentUser.name,created_at:nowStr()};
+    const ok=await sbInsert('payments',rec);
+    if(ok){
+      CACHE.payments.unshift({id:rec.id,userId:rec.user_id,area:row.area,fillDate,date:row.date,note:row.note,user:rec.user,createdAt:rec.created_at});
+      successCount++;
+    }
+  }
+  closeModal('modal-payment');
+  renderPaymentTable();
+  refreshDash();
+  showNotify(`已儲存 ${successCount} 筆繳單紀錄 ✓`,'success');
 }
 function renderPaymentTable(){
   const payments=CACHE.payments;
