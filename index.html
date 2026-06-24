@@ -1122,6 +1122,239 @@ function showNotify(msg,type=''){
   el.textContent=msg;el.className='notify show'+(type?' '+type:'');
   clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3500);
 }
+
+// ══════════════════════════════════════════
+//  PDF 共用工具
+// ══════════════════════════════════════════
+const PDF_FONT='\"Microsoft JhengHei\",\"PingFang TC\",Arial';
+const PDF_FS_TITLE=26;
+const PDF_FS_BODY=12;
+const PDF_FS_HDR=12;
+const PDF_FS_SMALL=10;
+
+function fmtMD(dateStr){
+  if(!dateStr)return'—';
+  const parts=dateStr.split('-');
+  if(parts.length<3)return dateStr;
+  return`${parseInt(parts[1])}/${parseInt(parts[2])}`;
+}
+function weekToDateRange(wk){
+  if(!wk)return'';
+  const[y,w]=wk.split('-W');
+  const d=new Date(+y,0,1+(w-1)*7);
+  const day=d.getDay();
+  const mon=new Date(d);mon.setDate(d.getDate()-(day===0?6:day-1));
+  const fri=new Date(mon);fri.setDate(mon.getDate()+4);
+  const fmt=dt=>`${dt.getMonth()+1}/${dt.getDate()}`;
+  return`${fmt(mon)}～${fmt(fri)}`;
+}
+function pdfText(doc,text,x,y,cellW,lineH,opts){
+  opts=opts||{};
+  const fs=opts.fs||PDF_FS_BODY;
+  const bold=opts.bold||false;
+  const color=opts.color||'#222222';
+  const align=opts.align||'left';
+  const measure=document.createElement('canvas');
+  const mctx=measure.getContext('2d');
+  mctx.font=`${bold?'bold ':''} ${fs}px ${PDF_FONT}`;
+  const textPxW=mctx.measureText(String(text)).width;
+  const scale=4;
+  const cW=Math.ceil(textPxW*scale)+4;
+  const cH=Math.ceil(fs*2.0*scale);
+  const c=document.createElement('canvas');
+  c.width=cW;c.height=cH;
+  const cx=c.getContext('2d');
+  cx.scale(scale,scale);
+  cx.font=`${bold?'bold ':''} ${fs}px ${PDF_FONT}`;
+  cx.fillStyle=color;
+  cx.fillText(String(text),1,fs*1.3);
+  const imgW=textPxW/3.78+1;
+  let drawX=x+1;
+  if(align==='center'){drawX=x+(cellW-imgW)/2;}
+  doc.addImage(c.toDataURL('image/png'),'PNG',drawX,y,imgW,lineH);
+}
+
+// ── 繳單進度 PDF ──
+function exportPaymentPDF(){
+  const ALL_AREAS=['1B','1F','1G','1H','1E','1J','燦坤','特力屋','愛買','家福','寶雅','2A','2B','3A','3B','3C','5A','5B','5C','5D','5E','5F','5G','5S'];
+  const payments=CACHE.payments;
+  const from=document.getElementById('filter-date-from').value;
+  const to=document.getElementById('filter-date-to').value;
+  const areaFilter=document.getElementById('filter-area').value;
+  let base=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  const targetAreas=areaFilter?[areaFilter]:ALL_AREAS;
+  const refDate=from||to||new Date().toISOString().split('T')[0];
+  const refYear=refDate.slice(0,4);
+  const refMonth=refDate.slice(5,7);
+  const monthStart=`${refYear}-${refMonth}-01`;
+  const monthEnd=`${refYear}-${refMonth}-31`;
+  const rows=targetAreas.map(area=>{
+    const areaRecs=base.filter(p=>p.area===area&&p.fillDate>=monthStart&&p.fillDate<=monthEnd).sort((a,b)=>(a.fillDate||'').localeCompare(b.fillDate||''));
+    const rec=areaRecs.length>0?areaRecs[areaRecs.length-1]:null;
+    return{area,date:rec?rec.date:null,note:rec?(rec.note||''):'',user:rec?rec.user:'',missing:rec===null};
+  });
+  const validDates=rows.filter(r=>r.date).map(r=>r.date).sort();
+  let medianDate=null;
+  if(validDates.length>0){const mid=Math.floor(validDates.length/2);medianDate=validDates.length%2===0?validDates[mid-1]:validDates[mid];}
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF('p','mm','a4');
+  const PAGE_W=210,MARGIN=10,TABLE_W=PAGE_W-MARGIN*2;
+  const HDR_H=11,ROW_H=8.5,FS_BODY=10;
+  let y=12;
+  pdfText(doc,'展晟財會部 繳單進度報表',MARGIN,y,TABLE_W,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=22;
+  pdfText(doc,`查詢月份：${refYear}年${parseInt(refMonth)}月　　列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=9;
+  const cols=[{x:MARGIN,w:22,label:'區　域'},{x:MARGIN+22,w:32,label:'繳單進度'},{x:MARGIN+54,w:98,label:'備　　　　　　　　　　　　　　　　　　　註'},{x:MARGIN+152,w:38,label:'回　報　者'}];
+  doc.setFillColor(26,39,68);doc.rect(MARGIN,y,TABLE_W,HDR_H,'F');
+  cols.forEach(c=>{pdfText(doc,c.label,c.x+0.5,y+0.5,c.w-1,HDR_H-1,{fs:PDF_FS_HDR,bold:true,color:'#ffffff',align:'center'});});
+  y+=HDR_H;
+  rows.forEach((r,i)=>{
+    const bg=i%2===0?[247,245,240]:[255,255,255];
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(MARGIN,y,TABLE_W,ROW_H,'F');
+    doc.setDrawColor(210,208,215);doc.rect(MARGIN,y,TABLE_W,ROW_H);
+    const isBelowMedian=r.date&&medianDate&&r.date<medianDate;
+    const dateDisplay=r.missing?'未繳單':fmtMD(r.date);
+    const dateColor=(r.missing||isBelowMedian)?'#b83232':'#222';
+    const dateBold=r.missing||isBelowMedian;
+    pdfText(doc,r.area,cols[0].x+0.5,y+0.5,cols[0].w-1,ROW_H-1,{fs:FS_BODY,align:'center',color:r.missing?'#b83232':'#222'});
+    pdfText(doc,dateDisplay,cols[1].x+0.5,y+0.5,cols[1].w-1,ROW_H-1,{fs:FS_BODY,align:'center',color:dateColor,bold:dateBold});
+    pdfText(doc,(r.note||'—').slice(0,35),cols[2].x+1,y+0.5,cols[2].w-2,ROW_H-1,{fs:FS_BODY,color:'#555'});
+    pdfText(doc,r.user,cols[3].x+0.5,y+0.5,cols[3].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    y+=ROW_H;
+  });
+  y+=3;
+  if(medianDate){pdfText(doc,`※ 繳單日期中間值：${fmtMD(medianDate)}　低於中間值以紅色粗體標示`,MARGIN,y,TABLE_W,5,{fs:8,color:'#b83232'});y+=6;}
+  pdfText(doc,`共 ${rows.filter(r=>!r.missing).length} 個區域已回報／${rows.filter(r=>r.missing).length} 個未繳單`,MARGIN,y,TABLE_W,5,{fs:8,color:'#666'});
+  doc.save('繳單進度報表.pdf');showNotify('PDF 已下載','success');
+}
+
+// ── 週報 PDF ──
+function exportWeeklyPDF(){
+  const weeklies=CACHE.weeklies;
+  const wk=document.getElementById('filter-week').value;
+  let base=currentUser.role==='admin'?weeklies:weeklies.filter(w=>w.userId===currentUser.id);
+  let filtered=wk?base.filter(w=>w.week===wk):[...base];
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF('p','mm','a4');
+  const PAGE_W=210,MARGIN=12,TABLE_W=PAGE_W-MARGIN*2;
+  const LABEL_H=8,CONTENT_H=8;
+  filtered.forEach((w,wi)=>{
+    if(wi>0)doc.addPage();
+    let y=12;
+    pdfText(doc,'展晟財會部 週報彙整',MARGIN,y,TABLE_W,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=20;
+    pdfText(doc,`列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=10;
+    const PERSON_H=11;
+    doc.setFillColor(26,39,68);doc.rect(MARGIN,y,TABLE_W,PERSON_H,'F');
+    const personDateRange=w.daterange||weekToDateRange(w.week);
+    pdfText(doc,`【${w.userName}】  ${personDateRange}`,MARGIN+2,y+0.5,TABLE_W-4,PERSON_H-1,{fs:PDF_FS_BODY+1,bold:true,color:'#ffffff'});
+    y+=PERSON_H+2;
+    WR_LABELS.forEach((label,i)=>{
+      const val=w['f'+(i+1)];
+      doc.setFillColor(237,241,248);doc.rect(MARGIN,y,TABLE_W,LABEL_H,'F');
+      doc.setDrawColor(200,198,210);doc.rect(MARGIN,y,TABLE_W,LABEL_H);
+      pdfText(doc,`${i+1}.  ${label}`,MARGIN+2,y+0.5,TABLE_W-4,LABEL_H-1,{fs:PDF_FS_BODY,bold:true,color:'#1a2744'});
+      y+=LABEL_H;
+      const displayVal=(val&&val.trim())?val.trim():'無';
+      const lines=[];
+      displayVal.split('\n').forEach(ln=>{
+        if(!ln.trim()){lines.push('無');return;}
+        const chunks=ln.match(/.{1,36}/g)||[ln];
+        chunks.forEach(ch=>lines.push(ch));
+      });
+      lines.forEach(line=>{
+        doc.setFillColor(255,255,255);doc.rect(MARGIN,y,TABLE_W,CONTENT_H,'F');
+        doc.setDrawColor(225,222,230);doc.rect(MARGIN,y,TABLE_W,CONTENT_H);
+        pdfText(doc,line,MARGIN+4,y+0.5,TABLE_W-6,CONTENT_H-1,{fs:PDF_FS_BODY,color:displayVal==='無'?'#aaa':'#333'});
+        y+=CONTENT_H;
+      });
+      y+=1;
+    });
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.5);doc.line(MARGIN,y+2,PAGE_W-MARGIN,y+2);doc.setLineWidth(0.2);
+  });
+  doc.save('週報.pdf');showNotify('週報 PDF 已下載','success');
+}
+
+// ── KPI PDF ──
+function exportKPIPDF(){
+  const kpis=CACHE.kpis;
+  const month=document.getElementById('filter-kpi-month').value;
+  let base=currentUser.role==='admin'?kpis:kpis.filter(k=>k.userId===currentUser.id);
+  let filtered=month?base.filter(k=>k.month===month):[...base];
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF('p','mm','a4');
+  let y=14;
+  const KC=[{x:14,w:22,label:'職務目標'},{x:36,w:28,label:'項　　目'},{x:64,w:70,label:'績　效　指　標'},{x:134,w:15,label:'KPI值'},{x:149,w:15,label:'自我評核'},{x:164,w:33,label:'成員自我反思說明'}];
+  const HDR_H=11,LINE_H=6,PAD_T=1.5;
+  const FS_SUB_HDR=12,LINE_H_SUB=6;
+  filtered.forEach((k,ki)=>{
+    if(ki>0){doc.addPage();y=14;}
+    pdfText(doc,'2026年財會部 - 工作績效考核表',14,y,183,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=22;
+    pdfText(doc,`月份：${k.month}`,14,y,80,8,{fs:PDF_FS_BODY,bold:true,color:'#333'});
+    pdfText(doc,`姓名：${k.userName}`,100,y,80,8,{fs:PDF_FS_BODY,bold:true,color:'#333'});y+=11;
+    doc.setFillColor(26,39,68);doc.rect(14,y,183,HDR_H,'F');
+    KC.forEach(c=>{pdfText(doc,c.label,c.x+1,y+0.5,c.w-2,HDR_H-1,{fs:PDF_FS_HDR,bold:true,color:'#ffffff',align:'center'});});
+    y+=HDR_H;
+    const rows=[
+      {cat:'職務目標85%',item:'帳務品質(40%)',desc:'【H】應收(含下貨收現)：\n1.發票及折讓單開立正確\n2.帳單及夾帶發票正確\n3.繳款單審核及書寫正確\n4.收款正確\n5.報表輸入正確\n計算方式：一筆扣2分，扣完為止\n【H】出納：付款金額錯誤/收款異常/繳款日報核對\n計算方式：1筆扣2分，扣完為止\n【H】應付(含零用金/總務月結)：\n開立折讓單/進項發票/請款金額/入庫未拋帳\n扣分基礎：1筆扣2分，扣完為止\n【H】稅務：審核憑證/現金銀行費用請款審核\n計算方式：1筆扣2分，扣完為止',kpi:40,score:k.quality,ref:k.refQuality||''},
+      {cat:'',item:'準點率(30%)',desc:'【H】應收/出納：帳單準點(次月2日)/應收核帳(18日)\n銷項發票核對(每月6日)/每週一折讓單追蹤\n繳款日報表/主管交辦事項\n計算方式：逾期1日扣5分，扣完為止\n【H】應付：應付請款(次月20日)/預付貨款明細表(次月25日)\n大陸貨款明細表(次月25日)/三節禮金\n每月勞健保立帳、折舊攤提/主管交辦事項\n計算方式：逾期1日扣5分，扣完為止\n【H】稅務(次月8日)：稅務申報/稅務憑證KEYIN\n現金銀存費用請款/主管交辦事項\n計算方式：逾期1日扣5分，扣完為止',kpi:30,score:k.ontime,ref:k.refOntime||''},
+      {cat:'職務目標75%',item:'回報率(10%)',desc:'1.跨部門作業問題未回報1次扣5分\n2.主管交辦事項未回報1次扣5分\n3.工作有異常要主動回報，當發現未回報1次扣5分',kpi:10,score:k.report,ref:k.refReport||''},
+      {cat:'',item:'支援率(5%)',desc:'主動支援其他人員工作或跨部門工作事項\n(1次加5分)',kpi:5,score:k.support,ref:k.refSupport||''},
+      {cat:'優化流程10%',item:'優化流程(10%)',desc:'流程改善，優化工作流程作業。\n(1次加5分，最多10分)',kpi:10,score:k.optimize,ref:k.refOptimize||''},
+      {cat:'出勤管理5%',item:'遲到(5%)',desc:'遲到每次扣1.5分，最多扣到5分',kpi:5,score:k.attendance,ref:k.refAttendance||''},
+    ];
+    rows.forEach((r,ri)=>{
+      const descLines=r.desc.split('\n');
+      const descTotalH=descLines.reduce((sum,line)=>sum+(line.startsWith('【H】')?LINE_H_SUB:LINE_H),0);
+      const refN=Math.max(1,Math.ceil((r.ref||'').length/12));
+      const catN=r.cat?Math.ceil(r.cat.length/5):1;
+      const rowH=Math.max(descTotalH,refN*LINE_H,catN*LINE_H)+PAD_T*2;
+      if(y+rowH>278){doc.addPage();y=14;}
+      const bg=ri%2===0?[248,247,244]:[255,255,255];
+      doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(14,y,183,rowH,'F');
+      doc.setDrawColor(210,208,215);doc.rect(14,y,183,rowH);
+      if(r.cat){const catLines=r.cat.split('\n');const catTotalH=catLines.length*LINE_H;const catStartY=y+(rowH-catTotalH)/2;catLines.forEach((line,li)=>{pdfText(doc,line,KC[0].x+1,catStartY+li*LINE_H,KC[0].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#1a2744',align:'center'});});}
+      const itemStartY=y+(rowH-LINE_H)/2;
+      pdfText(doc,r.item,KC[1].x+1,itemStartY,KC[1].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#333',align:'center'});
+      let descCurY=y+PAD_T;
+      descLines.forEach(line=>{
+        const isSubHdr=line.startsWith('【H】');
+        const displayLine=isSubHdr?line.replace('【H】',''):line;
+        const lh=isSubHdr?LINE_H_SUB:LINE_H;
+        pdfText(doc,displayLine,KC[2].x+1,descCurY,KC[2].w-2,lh,{fs:isSubHdr?FS_SUB_HDR:PDF_FS_BODY,bold:isSubHdr,color:isSubHdr?'#1a2744':'#333'});
+        descCurY+=lh;
+      });
+      const kpiStartY=y+(rowH-LINE_H)/2;
+      pdfText(doc,String(r.kpi),KC[3].x+1,kpiStartY,KC[3].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#1a2744',align:'center'});
+      pdfText(doc,String(r.score),KC[4].x+1,kpiStartY,KC[4].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#1a2744',align:'center'});
+      const refChunks=(r.ref||'').match(/.{1,10}/g)||[''];
+      const refTotalH=refChunks.length*LINE_H;
+      const refStartY=y+(rowH-refTotalH)/2;
+      refChunks.forEach((ch,li)=>{pdfText(doc,ch,KC[5].x+1,refStartY+li*LINE_H,KC[5].w-2,LINE_H,{fs:PDF_FS_BODY,color:'#333',align:'center'});});
+      y+=rowH;
+    });
+    const TOT_H=12;
+    if(y+TOT_H>280){doc.addPage();y=14;}
+    doc.setFillColor(237,241,248);doc.rect(14,y,183,TOT_H,'F');
+    doc.setDrawColor(200,168,75);doc.setLineWidth(0.5);doc.rect(14,y,183,TOT_H);doc.setLineWidth(0.2);
+    pdfText(doc,'合　計',KC[1].x+1,y+1.5,KC[1].w-2,TOT_H-3,{fs:PDF_FS_BODY+1,bold:true,color:'#1a2744',align:'center'});
+    pdfText(doc,'100',KC[3].x+1,y+1.5,KC[3].w-2,TOT_H-3,{fs:PDF_FS_BODY+1,bold:true,color:'#c8a84b',align:'center'});
+    pdfText(doc,String(k.total),KC[4].x+1,y+1.5,KC[4].w-2,TOT_H-3,{fs:PDF_FS_BODY+2,bold:true,color:'#1a2744',align:'center'});
+    y+=TOT_H+5;
+    if(y+16>280){doc.addPage();y=14;}
+    const EVAL_LABEL_H=8;
+    doc.setFillColor(255,252,240);doc.rect(14,y,183,EVAL_LABEL_H,'F');
+    doc.setDrawColor(200,168,75);doc.rect(14,y,183,EVAL_LABEL_H);
+    pdfText(doc,'成員對於本月表現進行評語及對部門建議（有成就感的事、希望下次可以改進的部分……等等）',16,y+0.5,175,EVAL_LABEL_H-1,{fs:PDF_FS_SMALL,bold:true,color:'#1a2744'});
+    y+=EVAL_LABEL_H;
+    const refLines2=((k.reflection||'').match(/.{1,50}/g)||['（未填寫）']);
+    const refH2=refLines2.length*8+5;
+    doc.setFillColor(255,255,255);doc.rect(14,y,183,refH2,'F');
+    doc.setDrawColor(210,208,215);doc.rect(14,y,183,refH2);
+    refLines2.forEach((line,li)=>{pdfText(doc,line,16,y+2+li*8,175,7,{fs:PDF_FS_BODY,color:'#333'});});
+    y+=refH2+6;
+    pdfText(doc,'PS：先進行一年導入期，導入期間可進行修改並不列入獎金計算，做一個參考',14,y,183,5,{fs:PDF_FS_SMALL,color:'#999'});
+  });
+  doc.save(`KPI考核表_${month||'全部'}.pdf`);showNotify('KPI PDF 已下載','success');
+}
 </script>
 </body>
 </html>
