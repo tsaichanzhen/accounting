@@ -448,7 +448,7 @@
                 <select id="sch-user" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
               </div>
               <div class="form-group" style="margin-bottom:10px">
-                <label>假別 / 類型</label>
+                <label>假　別</label>
                 <select id="sch-type" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
                   <option>事假</option><option>特休</option><option>補休</option>
                   <option>婚假</option><option>產檢假</option><option>回診</option>
@@ -1222,11 +1222,7 @@ let schYear = new Date().getFullYear();
 let schMonth = new Date().getMonth(); // 0-indexed
 let schColorMode = 'user'; // 'user' | 'type'
 
-function updateLeaveTypes(){
-  const group = document.getElementById('sch-group').value;
-  const sel = document.getElementById('sch-type');
-  sel.innerHTML = LEAVE_TYPES[group].map(t=>`<option>${t}</option>`).join('');
-}
+function updateLeaveTypes(){ /* 已合併，不需動態更新 */ }
 
 function initScheduleForm(){
   const today = new Date().toISOString().split('T')[0];
