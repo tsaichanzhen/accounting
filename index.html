@@ -448,15 +448,12 @@
                 <select id="sch-user" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
               </div>
               <div class="form-group" style="margin-bottom:10px">
-                <label>分類</label>
-                <select id="sch-group" onchange="updateLeaveTypes()" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
-                  <option value="假別">假別</option>
-                  <option value="公務活動">公務活動</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
                 <label>假別 / 類型</label>
-                <select id="sch-type" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
+                <select id="sch-type" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  <option>事假</option><option>特休</option><option>補休</option>
+                  <option>婚假</option><option>產檢假</option><option>回診</option>
+                  <option>教育訓練</option><option>集團會議</option><option>國內出差</option>
+                </select>
               </div>
               <div class="form-group" style="margin-bottom:10px">
                 <label>開始日期</label>
@@ -503,7 +500,7 @@
             <div class="card" style="margin-top:0">
               <div class="card-title">📋 當月排休列表</div>
               <div class="table-wrap"><table>
-                <thead><tr><th>成員</th><th>分類</th><th>假別/類型</th><th>開始</th><th>結束</th><th>備註</th><th>操作</th></tr></thead>
+                <thead><tr><th>成員</th><th>假別/類型</th><th>開始</th><th>結束</th><th>備註</th><th>操作</th></tr></thead>
                 <tbody id="sch-list-table"></tbody>
               </table></div>
             </div>
@@ -1203,10 +1200,9 @@ function loadMailSetting(){
 // ══════════════════════════════════════════
 //  排休月曆
 // ══════════════════════════════════════════
-const LEAVE_TYPES = {
-  '假別': ['事假','特休','補休','婚假','產檢假','回診'],
-  '公務活動': ['教育訓練','集團會議','國內出差']
-};
+const LEAVE_TYPES = ['事假','特休','補休','婚假','產檢假','回診','教育訓練','集團會議','國內出差'];
+
+function updateLeaveTypes(){ /* 已合併，不需動態更新 */ }
 // 人員顏色池
 const USER_COLORS = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac','#1a9641','#d73027'];
 // 假別顏色
@@ -1233,14 +1229,11 @@ function updateLeaveTypes(){
 }
 
 function initScheduleForm(){
-  updateLeaveTypes();
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('sch-start').value = today;
   document.getElementById('sch-end').value = today;
-  // 填入成員選單
   const sel = document.getElementById('sch-user');
   sel.innerHTML = CACHE.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
-  // 預設選自己
   const mine = CACHE.accounts.find(a=>a.id===currentUser.id);
   if(mine) sel.value = mine.id;
 }
@@ -1357,31 +1350,29 @@ function renderSchList(){
   tb.innerHTML = items.length ? items.map(s=>`
     <tr>
       <td>${s.userName}</td>
-      <td><span class="badge ${s.typeGroup==='假別'?'badge-blue':'badge-orange'}">${s.typeGroup}</span></td>
       <td>${s.leaveType}</td>
       <td>${s.startDate}</td>
       <td>${s.endDate}</td>
       <td>${s.note||'—'}</td>
       <td><button class="btn btn-sm btn-danger" onclick="deleteSchedule('${s.id}')">刪除</button></td>
     </tr>`).join('')
-    : '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:24px">當月無排休紀錄</td></tr>';
+    : '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:24px">當月無排休紀錄</td></tr>';
 }
 
 async function saveSchedule(){
   const userId = document.getElementById('sch-user').value;
   const acc = CACHE.accounts.find(a=>a.id===userId);
-  const typeGroup = document.getElementById('sch-group').value;
   const leaveType = document.getElementById('sch-type').value;
   const startDate = document.getElementById('sch-start').value;
   const endDate = document.getElementById('sch-end').value;
   const note = document.getElementById('sch-note').value.trim();
   if(!startDate||!endDate){showNotify('請選擇日期','error');return;}
   if(endDate<startDate){showNotify('結束日期不能早於開始日期','error');return;}
-  const rec = {id:pid(), user_id:userId, user_name:acc?acc.name:'', type_group:typeGroup, leave_type:leaveType, start_date:startDate, end_date:endDate, note, created_at:nowStr()};
+  const rec = {id:pid(), user_id:userId, user_name:acc?acc.name:'', type_group:'假別', leave_type:leaveType, start_date:startDate, end_date:endDate, note, created_at:nowStr()};
   const ok = await sbInsert('schedules', rec);
   if(ok){
     if(!CACHE.schedules) CACHE.schedules=[];
-    CACHE.schedules.push({id:rec.id,userId:rec.user_id,userName:rec.user_name,typeGroup:rec.type_group,leaveType:rec.leave_type,startDate:rec.start_date,endDate:rec.end_date,note:rec.note,createdAt:rec.created_at});
+    CACHE.schedules.push({id:rec.id,userId:rec.user_id,userName:rec.user_name,typeGroup:'假別',leaveType:rec.leave_type,startDate:rec.start_date,endDate:rec.end_date,note:rec.note,createdAt:rec.created_at});
     document.getElementById('sch-note').value='';
     renderScheduleCalendar();
     showNotify('排休已新增 ✓','success');
