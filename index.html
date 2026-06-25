@@ -198,6 +198,7 @@
         <div class="nav-item" onclick="showSection('payment',this)"><span class="icon">📄</span>繳單進度</div>
         <div class="nav-item" onclick="showSection('weekly',this)"><span class="icon">📋</span>週報填寫</div>
         <div class="nav-item" onclick="showSection('kpi',this)"><span class="icon">🎯</span>月度 KPI</div>
+        <div class="nav-item" onclick="showSection('schedule',this)"><span class="icon">🗓️</span>排休月曆</div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
@@ -427,6 +428,85 @@
           <div class="modal-footer" style="justify-content:flex-start;margin-top:12px">
             <button class="btn btn-primary" onclick="changePassword()">確認修改</button>
             <span id="pwd-status" style="font-size:13px;margin-left:12px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 排休月曆 -->
+      <div class="section" id="sec-schedule">
+        <div class="page-header">
+          <div><div class="page-title">部門排休月曆</div><div class="page-subtitle">查看及管理部門成員的假別與公務活動</div></div>
+          <button class="btn btn-gold btn-sm" onclick="exportSchedulePDF()">⬇ 匯出圖檔</button>
+        </div>
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+          <!-- 左側新增表單 -->
+          <div style="width:240px;flex-shrink:0">
+            <div class="card" style="padding:18px">
+              <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px">👤 新增排休</div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label>選擇成員</label>
+                <select id="sch-user" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label>分類</label>
+                <select id="sch-group" onchange="updateLeaveTypes()" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+                  <option value="假別">假別</option>
+                  <option value="公務活動">公務活動</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label>假別 / 類型</label>
+                <select id="sch-type" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label>開始日期</label>
+                <input type="date" id="sch-start" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label>結束日期</label>
+                <input type="date" id="sch-end" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+              </div>
+              <div class="form-group" style="margin-bottom:14px">
+                <label>備註（可選）</label>
+                <input type="text" id="sch-note" placeholder="例：蜜月旅行" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+              </div>
+              <button class="btn btn-primary" style="width:100%" onclick="saveSchedule()">＋ 新增</button>
+            </div>
+            <div class="card" style="padding:18px;margin-top:0">
+              <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">🎨 顏色配置</div>
+              <div style="display:flex;gap:8px">
+                <button id="color-by-user" onclick="setColorMode('user')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--navy);background:var(--navy);color:#fff">依人員</button>
+                <button id="color-by-type" onclick="setColorMode('type')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--gray-200);background:#fff;color:var(--gray-400)">依假別</button>
+              </div>
+              <div id="sch-legend" style="margin-top:12px;font-size:11px"></div>
+            </div>
+          </div>
+          <!-- 右側月曆 -->
+          <div style="flex:1;min-width:0">
+            <div class="card" style="padding:20px" id="schedule-calendar-card">
+              <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px">
+                <button onclick="changeSchMonth(-1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">‹</button>
+                <div style="font-size:16px;font-weight:700;color:var(--navy);min-width:130px;text-align:center" id="sch-month-label"></div>
+                <button onclick="changeSchMonth(1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">›</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
+                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:#e53e3e">日</div>
+                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">一</div>
+                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">二</div>
+                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">三</div>
+                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">四</div>
+                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">五</div>
+                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:#3182ce">六</div>
+              </div>
+              <div id="sch-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+            </div>
+            <div class="card" style="margin-top:0">
+              <div class="card-title">📋 當月排休列表</div>
+              <div class="table-wrap"><table>
+                <thead><tr><th>成員</th><th>分類</th><th>假別/類型</th><th>開始</th><th>結束</th><th>備註</th><th>操作</th></tr></thead>
+                <tbody id="sch-list-table"></tbody>
+              </table></div>
+            </div>
           </div>
         </div>
       </div>
@@ -712,22 +792,26 @@ async function enterApp(){
   showNotify('載入完成 ✓','success');
   refreshDash();refreshUserSelects();renderUserTable();renderHistoryTable();renderMyHistory();
   renderPaymentTable();renderWeeklyTable();renderKPITable();loadMailSetting();
+  initScheduleForm();
+  renderScheduleCalendar();
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('zh-TW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 }
 
 async function loadAllCache(){
-  const [payments,weeklies,kpis,loginLogs,accounts]=await Promise.all([
+  const [payments,weeklies,kpis,loginLogs,accounts,schedules]=await Promise.all([
     sbGet('payments','order=created_at.desc'),
     sbGet('weeklies','order=created_at.desc'),
     sbGet('kpis','order=created_at.desc'),
     sbGet('login_logs','order=login_at.desc&limit=200'),
     sbGet('accounts','order=created.asc'),
+    sbGet('schedules','order=start_date.asc'),
   ]);
   CACHE.payments=payments.map(p=>({id:p.id,userId:p.user_id,area:p.area,fillDate:p.fill_date,date:p.date,note:p.note,paymentType:p.payment_type||'monthly',user:p.user,createdAt:p.created_at}));
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
   CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
   CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created}));
+  CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,endDate:s.end_date,note:s.note,createdAt:s.created_at}));
 }
 
 async function doLogout(){
@@ -751,6 +835,7 @@ function showSection(id,el){
   if(id==='history') renderHistoryTable();
   if(id==='myhistory') renderMyHistory();
   if(id==='dashboard') refreshDash();
+  if(id==='schedule'){ initScheduleForm(); renderScheduleCalendar(); }
 }
 
 // ── DASHBOARD ──
@@ -1113,6 +1198,255 @@ function loadMailSetting(){
   const s=JSON.parse(localStorage.getItem('mailSetting')||'{}');
   const n=document.getElementById('manager-name');const e=document.getElementById('manager-email');
   if(n)n.value=s.name||'';if(e)e.value=s.email||'';
+}
+
+// ══════════════════════════════════════════
+//  排休月曆
+// ══════════════════════════════════════════
+const LEAVE_TYPES = {
+  '假別': ['事假','特休','補休','婚假','產檢假','回診'],
+  '公務活動': ['教育訓練','集團會議','國內出差']
+};
+// 人員顏色池
+const USER_COLORS = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac','#1a9641','#d73027'];
+// 假別顏色
+const TYPE_COLORS = {'事假':'#f28e2b','特休':'#4e79a7','補休':'#76b7b2','婚假':'#e15759','產檢假':'#b07aa1','回診':'#59a14f','教育訓練':'#edc948','集團會議','#9c755f','國內出差':'#ff9da7'};
+const TYPE_COLORS_MAP = {'事假':'#f28e2b','特休':'#4e79a7','補休':'#76b7b2','婚假':'#e15759','產檢假':'#b07aa1','回診':'#59a14f','教育訓練':'#edc948','集團會議':'#9c755f','國內出差':'#ff9da7'};
+
+let schYear = new Date().getFullYear();
+let schMonth = new Date().getMonth(); // 0-indexed
+let schColorMode = 'user'; // 'user' | 'type'
+
+function updateLeaveTypes(){
+  const group = document.getElementById('sch-group').value;
+  const sel = document.getElementById('sch-type');
+  sel.innerHTML = LEAVE_TYPES[group].map(t=>`<option>${t}</option>`).join('');
+}
+
+function initScheduleForm(){
+  updateLeaveTypes();
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('sch-start').value = today;
+  document.getElementById('sch-end').value = today;
+  // 填入成員選單
+  const sel = document.getElementById('sch-user');
+  sel.innerHTML = CACHE.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  // 預設選自己
+  const mine = CACHE.accounts.find(a=>a.id===currentUser.id);
+  if(mine) sel.value = mine.id;
+}
+
+function setColorMode(mode){
+  schColorMode = mode;
+  document.getElementById('color-by-user').style.background = mode==='user'?'var(--navy)':'#fff';
+  document.getElementById('color-by-user').style.color = mode==='user'?'#fff':'var(--gray-400)';
+  document.getElementById('color-by-user').style.borderColor = mode==='user'?'var(--navy)':'var(--gray-200)';
+  document.getElementById('color-by-type').style.background = mode==='type'?'var(--navy)':'#fff';
+  document.getElementById('color-by-type').style.color = mode==='type'?'#fff':'var(--gray-400)';
+  document.getElementById('color-by-type').style.borderColor = mode==='type'?'var(--navy)':'var(--gray-200)';
+  renderScheduleCalendar();
+}
+
+function getSchColor(item){
+  if(schColorMode === 'type'){
+    return TYPE_COLORS_MAP[item.leaveType] || '#aaa';
+  } else {
+    const idx = CACHE.accounts.findIndex(a=>a.id===item.userId);
+    return USER_COLORS[idx % USER_COLORS.length] || '#4e79a7';
+  }
+}
+
+function changeSchMonth(delta){
+  schMonth += delta;
+  if(schMonth > 11){ schMonth=0; schYear++; }
+  if(schMonth < 0){ schMonth=11; schYear--; }
+  renderScheduleCalendar();
+}
+
+function renderScheduleCalendar(){
+  document.getElementById('sch-month-label').textContent = `${schYear} 年 ${schMonth+1} 月`;
+  const grid = document.getElementById('sch-calendar-grid');
+  grid.innerHTML = '';
+
+  const firstDay = new Date(schYear, schMonth, 1).getDay();
+  const daysInMonth = new Date(schYear, schMonth+1, 0).getDate();
+  const today = new Date().toISOString().split('T')[0];
+
+  // 當月排休
+  const monthStr = `${schYear}-${String(schMonth+1).padStart(2,'0')}`;
+  const monthItems = (CACHE.schedules||[]).filter(s=>{
+    const sd = s.startDate, ed = s.endDate;
+    const mStart = monthStr+'-01', mEnd = monthStr+'-31';
+    return sd<=mEnd && ed>=mStart;
+  });
+
+  // 空格
+  for(let i=0;i<firstDay;i++){
+    const d=document.createElement('div');
+    d.style.cssText='min-height:80px;background:#f9f9f9;border-radius:4px;padding:4px';
+    grid.appendChild(d);
+  }
+
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr = `${schYear}-${String(schMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dow = new Date(schYear, schMonth, day).getDay();
+    const isToday = dateStr===today;
+    const isWeekend = dow===0||dow===6;
+
+    const cell = document.createElement('div');
+    cell.style.cssText = `min-height:80px;background:${isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff'};border-radius:6px;padding:4px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'}`;
+
+    const dayLabel = document.createElement('div');
+    dayLabel.style.cssText = `font-size:12px;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:3px`;
+    dayLabel.textContent = day;
+    cell.appendChild(dayLabel);
+
+    // 當日有哪些排休
+    const dayItems = monthItems.filter(s=>s.startDate<=dateStr && s.endDate>=dateStr);
+    dayItems.forEach(s=>{
+      const tag = document.createElement('div');
+      const color = getSchColor(s);
+      tag.style.cssText = `font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;color:#fff;background:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default`;
+      tag.title = `${s.userName}：${s.leaveType}${s.note?'（'+s.note+'）':''}`;
+      tag.textContent = `${s.userName} ${s.leaveType}`;
+      cell.appendChild(tag);
+    });
+
+    grid.appendChild(cell);
+  }
+
+  renderSchLegend();
+  renderSchList();
+}
+
+function renderSchLegend(){
+  const legend = document.getElementById('sch-legend');
+  const monthItems = (CACHE.schedules||[]).filter(s=>{
+    const monthStr = `${schYear}-${String(schMonth+1).padStart(2,'0')}`;
+    return s.startDate<=monthStr+'-31' && s.endDate>=monthStr+'-01';
+  });
+  let items = [];
+  if(schColorMode==='user'){
+    const names = [...new Set(monthItems.map(s=>s.userId))];
+    items = names.map(uid=>{
+      const acc = CACHE.accounts.find(a=>a.id===uid);
+      const idx = CACHE.accounts.findIndex(a=>a.id===uid);
+      return{label:acc?acc.name:uid, color:USER_COLORS[idx%USER_COLORS.length]};
+    });
+  } else {
+    const types = [...new Set(monthItems.map(s=>s.leaveType))];
+    items = types.map(t=>({label:t, color:TYPE_COLORS_MAP[t]||'#aaa'}));
+  }
+  legend.innerHTML = items.map(i=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:12px;height:12px;border-radius:3px;background:${i.color};flex-shrink:0"></div><span style="color:var(--gray-600)">${i.label}</span></div>`).join('');
+}
+
+function renderSchList(){
+  const monthStr = `${schYear}-${String(schMonth+1).padStart(2,'0')}`;
+  const items = (CACHE.schedules||[]).filter(s=>s.startDate<=monthStr+'-31' && s.endDate>=monthStr+'-01')
+    .sort((a,b)=>a.startDate.localeCompare(b.startDate));
+  const tb = document.getElementById('sch-list-table');
+  tb.innerHTML = items.length ? items.map(s=>`
+    <tr>
+      <td>${s.userName}</td>
+      <td><span class="badge ${s.typeGroup==='假別'?'badge-blue':'badge-orange'}">${s.typeGroup}</span></td>
+      <td>${s.leaveType}</td>
+      <td>${s.startDate}</td>
+      <td>${s.endDate}</td>
+      <td>${s.note||'—'}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteSchedule('${s.id}')">刪除</button></td>
+    </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:24px">當月無排休紀錄</td></tr>';
+}
+
+async function saveSchedule(){
+  const userId = document.getElementById('sch-user').value;
+  const acc = CACHE.accounts.find(a=>a.id===userId);
+  const typeGroup = document.getElementById('sch-group').value;
+  const leaveType = document.getElementById('sch-type').value;
+  const startDate = document.getElementById('sch-start').value;
+  const endDate = document.getElementById('sch-end').value;
+  const note = document.getElementById('sch-note').value.trim();
+  if(!startDate||!endDate){showNotify('請選擇日期','error');return;}
+  if(endDate<startDate){showNotify('結束日期不能早於開始日期','error');return;}
+  const rec = {id:pid(), user_id:userId, user_name:acc?acc.name:'', type_group:typeGroup, leave_type:leaveType, start_date:startDate, end_date:endDate, note, created_at:nowStr()};
+  const ok = await sbInsert('schedules', rec);
+  if(ok){
+    if(!CACHE.schedules) CACHE.schedules=[];
+    CACHE.schedules.push({id:rec.id,userId:rec.user_id,userName:rec.user_name,typeGroup:rec.type_group,leaveType:rec.leave_type,startDate:rec.start_date,endDate:rec.end_date,note:rec.note,createdAt:rec.created_at});
+    document.getElementById('sch-note').value='';
+    renderScheduleCalendar();
+    showNotify('排休已新增 ✓','success');
+  } else { showNotify('新增失敗，請重試','error'); }
+}
+
+async function deleteSchedule(id){
+  if(!confirm('確定要刪除此排休紀錄？'))return;
+  const ok = await sbDelete('schedules', id);
+  if(ok){
+    CACHE.schedules = CACHE.schedules.filter(s=>s.id!==id);
+    renderScheduleCalendar();
+    showNotify('已刪除','success');
+  }
+}
+
+function exportSchedulePDF(){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF('l','mm','a4'); // 橫向
+  const PAGE_W=297, PAGE_H=210, MARGIN=10;
+  let y=14;
+  const monthLabel=`${schYear} 年 ${schMonth+1} 月`;
+  pdfText(doc,`展晟財會部 排休月曆　${monthLabel}`,MARGIN,y,PAGE_W-MARGIN*2,12,{fs:18,bold:true,color:'#1a2744',align:'center'});
+  y+=16;
+  pdfText(doc,`列印時間：${nowStr()}`,MARGIN,y,100,6,{fs:8,color:'#666'});
+  y+=10;
+
+  const COL_W=(PAGE_W-MARGIN*2)/7;
+  const DAYS=['日','一','二','三','四','五','六'];
+  // 表頭
+  DAYS.forEach((d,i)=>{
+    doc.setFillColor(i===0?200:i===6?180:26, i===0?50:i===6?180:39, i===0?50:i===6?220:68);
+    doc.rect(MARGIN+i*COL_W, y, COL_W, 8,'F');
+    pdfText(doc,d,MARGIN+i*COL_W,y+0.5,COL_W,7,{fs:11,bold:true,color:'#fff',align:'center'});
+  });
+  y+=9;
+
+  const firstDay=new Date(schYear,schMonth,1).getDay();
+  const daysInMonth=new Date(schYear,schMonth+1,0).getDate();
+  const monthStr=`${schYear}-${String(schMonth+1).padStart(2,'0')}`;
+  const monthItems=(CACHE.schedules||[]).filter(s=>s.startDate<=monthStr+'-31'&&s.endDate>=monthStr+'-01');
+  const ROW_H=24;
+  const totalCells=firstDay+daysInMonth;
+  const totalRows=Math.ceil(totalCells/7);
+
+  for(let row=0;row<totalRows;row++){
+    for(let col=0;col<7;col++){
+      const cellIdx=row*7+col;
+      const day=cellIdx-firstDay+1;
+      const x=MARGIN+col*COL_W;
+      const isValid=day>=1&&day<=daysInMonth;
+      doc.setFillColor(isValid?(col===0||col===6?248:255):245, isValid?248:245, isValid?248:245);
+      doc.rect(x,y,COL_W,ROW_H,'F');
+      doc.setDrawColor(210,208,215);
+      doc.rect(x,y,COL_W,ROW_H);
+      if(isValid){
+        pdfText(doc,String(day),x+1,y+0.5,COL_W-2,5,{fs:9,bold:true,color:col===0?'#e53e3e':col===6?'#3182ce':'#555'});
+        const dateStr=`${schYear}-${String(schMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const dayItems=monthItems.filter(s=>s.startDate<=dateStr&&s.endDate>=dateStr);
+        dayItems.slice(0,3).forEach((s,si)=>{
+          const color=schColorMode==='type'?(TYPE_COLORS_MAP[s.leaveType]||'#aaa'):(()=>{const idx=CACHE.accounts.findIndex(a=>a.id===s.userId);return USER_COLORS[idx%USER_COLORS.length];})();
+          const hex=color.replace('#','');
+          const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+          doc.setFillColor(r,g,b);
+          doc.rect(x+1,y+6+si*5.5,COL_W-2,5,'F');
+          pdfText(doc,`${s.userName} ${s.leaveType}`,x+1.5,y+6+si*5.5,COL_W-3,4.5,{fs:7,color:'#fff'});
+        });
+        if(dayItems.length>3) pdfText(doc,`+${dayItems.length-3}`,x+1,y+22.5,COL_W-2,4,{fs:7,color:'#888'});
+      }
+    }
+    y+=ROW_H;
+  }
+  doc.save(`排休月曆_${schYear}${String(schMonth+1).padStart(2,'0')}.pdf`);
+  showNotify('月曆 PDF 已下載','success');
 }
 
 // ── 修改密碼 ──
