@@ -1210,8 +1210,17 @@ const LEAVE_TYPES = {
 // 人員顏色池
 const USER_COLORS = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac','#1a9641','#d73027'];
 // 假別顏色
-const TYPE_COLORS = {'事假':'#f28e2b','特休':'#4e79a7','補休':'#76b7b2','婚假':'#e15759','產檢假':'#b07aa1','回診':'#59a14f','教育訓練':'#edc948','集團會議':'#9c755f','國內出差':'#ff9da7'};
-const TYPE_COLORS_MAP = {'事假':'#f28e2b','特休':'#4e79a7','補休':'#76b7b2','婚假':'#e15759','產檢假':'#b07aa1','回診':'#59a14f','教育訓練':'#edc948','集團會議':'#9c755f','國內出差':'#ff9da7'};
+const TYPE_COLORS_MAP = {};
+TYPE_COLORS_MAP['\u4e8b\u5047']='#f28e2b';
+TYPE_COLORS_MAP['\u7279\u4f11']='#4e79a7';
+TYPE_COLORS_MAP['\u88dc\u4f11']='#76b7b2';
+TYPE_COLORS_MAP['\u5a5a\u5047']='#e15759';
+TYPE_COLORS_MAP['\u7522\u6aa2\u5047']='#b07aa1';
+TYPE_COLORS_MAP['\u56de\u8a3a']='#59a14f';
+TYPE_COLORS_MAP['\u6559\u80b2\u8a13\u7df4']='#edc948';
+TYPE_COLORS_MAP['\u96c6\u5718\u6703\u8b70']='#9c755f';
+TYPE_COLORS_MAP['\u570b\u5167\u51fa\u5dee']='#ff9da7';
+const TYPE_COLORS = TYPE_COLORS_MAP;
 
 let schYear = new Date().getFullYear();
 let schMonth = new Date().getMonth(); // 0-indexed
