@@ -840,7 +840,7 @@ function refreshDash(){
   const payments=CACHE.payments,weeklies=CACHE.weeklies,kpis=CACHE.kpis;
   const thisMonth=new Date().toISOString().slice(0,7);
   const thisWeek=getISOWeek(new Date());
-  const myP=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  const myP=payments;
   const myW=currentUser.role==='admin'?weeklies:weeklies.filter(w=>w.userId===currentUser.id);
   const myK=currentUser.role==='admin'?kpis:kpis.filter(k=>k.userId===currentUser.id);
   document.getElementById('dash-payment-count').textContent=myP.filter(p=>p.fillDate&&p.fillDate.startsWith(thisMonth)).length;
@@ -972,7 +972,7 @@ function renderPaymentTable(){
   const from=document.getElementById('filter-date-from').value;
   const to=document.getElementById('filter-date-to').value;
   const area=document.getElementById('filter-area').value;
-  let base=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  let base=payments;
   // 依目前頁簽篩選類型
   base = base.filter(p=>(p.paymentType||'monthly')===currentPaymentType);
   let filtered=base.filter(p=>{
@@ -1559,7 +1559,7 @@ function exportPaymentPDF(){
   const from=document.getElementById('filter-date-from').value;
   const to=document.getElementById('filter-date-to').value;
   const areaFilter=document.getElementById('filter-area').value;
-  let base=currentUser.role==='admin'?payments:payments.filter(p=>p.userId===currentUser.id);
+  let base=payments;
   // 依目前頁簽篩選
   base = base.filter(p=>(p.paymentType||'monthly')===currentPaymentType);
   const targetAreas=areaFilter?[areaFilter]:ALL_AREAS;
