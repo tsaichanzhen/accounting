@@ -793,6 +793,30 @@ async function enterApp(){
   initScheduleForm();
   renderScheduleCalendar();
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('zh-TW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  // 啟動即時更新（每30秒自動重新載入資料）
+  startAutoRefresh();
+}
+
+let autoRefreshTimer = null;
+
+function startAutoRefresh(){
+  // 清除舊的計時器（避免重複）
+  if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(async ()=>{
+    if(!currentUser) return; // 已登出就停止
+    await loadAllCache();
+    // 依目前所在頁面更新對應畫面
+    const activeSection = document.querySelector('.section.active');
+    if(!activeSection) return;
+    const id = activeSection.id.replace('sec-','');
+    if(id==='dashboard') refreshDash();
+    if(id==='payment') { renderPaymentTable(); refreshDash(); }
+    if(id==='weekly') renderWeeklyTable();
+    if(id==='kpi') renderKPITable();
+    if(id==='schedule') renderScheduleCalendar();
+    if(id==='history') renderHistoryTable();
+    if(id==='users') renderUserTable();
+  }, 30000); // 每30秒更新一次
 }
 
 async function loadAllCache(){
@@ -813,6 +837,7 @@ async function loadAllCache(){
 }
 
 async function doLogout(){
+  if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; }
   const logs=await sbGet('login_logs',`user_id=eq.${currentUser.id}&logout_at=is.null&limit=1`);
   if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
   currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[]};
