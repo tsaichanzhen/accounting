@@ -472,8 +472,8 @@
             <div class="card" style="padding:18px;margin-top:0">
               <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">🎨 顏色配置</div>
               <div style="display:flex;gap:8px">
-                <button id="color-by-user" onclick="setColorMode('user')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--navy);background:var(--navy);color:#fff">依人員</button>
-                <button id="color-by-type" onclick="setColorMode('type')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--gray-200);background:#fff;color:var(--gray-400)">依假別</button>
+                <button id="color-by-user" onclick="setColorMode('user')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--gray-200);background:#fff;color:var(--gray-400)">依人員</button>
+                <button id="color-by-type" onclick="setColorMode('type')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--navy);background:var(--navy);color:#fff">依假別</button>
               </div>
               <div id="sch-legend" style="margin-top:12px;font-size:11px"></div>
             </div>
@@ -1220,7 +1220,7 @@ const TYPE_COLORS = TYPE_COLORS_MAP;
 
 let schYear = new Date().getFullYear();
 let schMonth = new Date().getMonth(); // 0-indexed
-let schColorMode = 'user'; // 'user' | 'type'
+let schColorMode = 'type'; // 預設依假別
 
 function updateLeaveTypes(){ /* 已合併，不需動態更新 */ }
 
