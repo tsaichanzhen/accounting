@@ -723,7 +723,7 @@
 
 <!-- MODAL: 公告編輯 -->
 <div class="modal-overlay" id="modal-announcement">
-  <div class="modal" style="width:540px">
+  <div class="modal" style="width:560px;max-height:85vh;overflow-y:auto">
     <div class="modal-title">📢 編輯公告內容</div>
     <div class="form-row">
       <div class="form-group">
@@ -732,73 +732,8 @@
       </div>
     </div>
 
-    <!-- Emoji 選擇面板 -->
-    <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">點擊插入 Emoji</div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">通知 / 公告</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['🔔','📢','📣','🗣️','🚨','⚠️','❗','🔴','🟡','🟢','💬','📡'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">時間 / 會議</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['📅','🗓️','⏰','⏳','⌚','🕐','🕓','🕖','🕘','👥','🤝','💼','🏢'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">工作 / 文件</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['📌','📍','📋','📝','📄','📑','🗂️','📁','✅','☑️','📊','📈','🖊️','✏️'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">重要 / 提醒</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['🎯','💡','🔑','⭐','🌟','💫','✨','🏆','🥇','🚩','🔥','💥','🆘','🔒'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">財務 / 金錢</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['💰','💴','💵','💸','🏦','💳','🧾','💲','🪙','💎','📤','📥','📦'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">慶祝 / 節日</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['🎉','🎊','🎈','🎁','🎀','🎂','🥳','🎆','🎇','🧨','🎵','🎶','🎤','💃'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">人員 / 部門</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['👩‍💼','👨‍💼','👩‍💻','🧑‍🤝‍🧑','🙋','💁','🤵','👏','💪','🫶','🙏','😊','😄'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:6px">
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">出差 / 外出</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['✈️','🚗','🚌','🚅','🏨','🗺️','🧳','🌏','📍','🛫','🛬','🌐','🏙️'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-
-      <div>
-        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">裝飾 / 美化</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${['🌸','🌺','🌻','🌹','🌷','🍀','🌿','🌈','☀️','🌙','⭐','🦋','🌊','🎀'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
-        </div>
-      </div>
-    </div>
+    <!-- Emoji 面板（JS動態產生） -->
+    <div id="emoji-panel" style="margin-bottom:14px"></div>
 
     <div style="padding:10px 14px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue);margin-bottom:4px">
       💡 公告會以跑馬燈方式顯示在首頁，所有登入人員皆可看到。留空則不顯示公告。
@@ -1607,6 +1542,40 @@ function renderAnnouncement(text){
 function openAnnouncementModal(){
   const marquee = document.getElementById('marquee-text');
   document.getElementById('announcement-input').value = marquee.textContent||'';
+  // 動態產生 emoji 面板
+  const EMOJI_GROUPS = [
+    { label:'通知 / 公告', list:['🔔','📢','📣','🗣️','🚨','⚠️','❗','🔴','🟡','🟢','💬','📡'] },
+    { label:'時間 / 會議', list:['📅','🗓️','⏰','⏳','⌚','🕐','🕓','🕖','🕘','👥','🤝','💼','🏢'] },
+    { label:'工作 / 文件', list:['📌','📍','📋','📝','📄','📑','🗂️','📁','✅','☑️','📊','📈','🖊️','✏️'] },
+    { label:'重要 / 提醒', list:['🎯','💡','🔑','⭐','🌟','💫','✨','🏆','🥇','🚩','🔥','💥','🆘','🔒'] },
+    { label:'財務 / 金錢', list:['💰','💴','💵','💸','🏦','💳','🧾','💲','🪙','💎','📤','📥','📦'] },
+    { label:'慶祝 / 節日', list:['🎉','🎊','🎈','🎁','🎀','🎂','🥳','🎆','🎇','🧨','🎵','🎶','🎤','💃'] },
+    { label:'人員 / 部門', list:['👩‍💼','👨‍💼','👩‍💻','🧑‍🤝‍🧑','🙋','💁','🤵','👏','💪','🫶','🙏','😊','😄'] },
+    { label:'出差 / 外出', list:['✈️','🚗','🚌','🚅','🏨','🗺️','🧳','🌏','📍','🛫','🛬','🌐','🏙️'] },
+    { label:'裝飾 / 美化', list:['🌸','🌺','🌻','🌹','🌷','🍀','🌿','🌈','☀️','🌙','⭐','🦋','🌊','🎀'] },
+  ];
+  const panel = document.getElementById('emoji-panel');
+  panel.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">點擊插入 Emoji</div>';
+  EMOJI_GROUPS.forEach(g => {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '8px';
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:11px;color:var(--gray-400);margin-bottom:4px';
+    lbl.textContent = g.label;
+    wrap.appendChild(lbl);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px';
+    g.list.forEach(e => {
+      const btn = document.createElement('button');
+      btn.textContent = e;
+      btn.title = e;
+      btn.style.cssText = 'padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.3';
+      btn.onclick = () => insertEmoji(e);
+      row.appendChild(btn);
+    });
+    wrap.appendChild(row);
+    panel.appendChild(wrap);
+  });
   document.getElementById('modal-announcement').classList.add('open');
 }
 
