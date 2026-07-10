@@ -723,14 +723,83 @@
 
 <!-- MODAL: 公告編輯 -->
 <div class="modal-overlay" id="modal-announcement">
-  <div class="modal" style="width:500px">
+  <div class="modal" style="width:540px">
     <div class="modal-title">📢 編輯公告內容</div>
     <div class="form-row">
       <div class="form-group">
         <label>公告內容</label>
-        <textarea id="announcement-input" rows="4" placeholder="請輸入公告內容，例如：本週五(7/12)下午3點請至會議室開會，請準時出席。" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:inherit;resize:vertical"></textarea>
+        <textarea id="announcement-input" rows="3" placeholder="請輸入公告內容，可點下方 emoji 插入圖示" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:inherit;resize:vertical"></textarea>
       </div>
     </div>
+
+    <!-- Emoji 選擇面板 -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">點擊插入 Emoji</div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">通知 / 公告</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['🔔','📢','📣','🗣️','🚨','⚠️','❗','🔴','🟡','🟢','💬','📡'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">時間 / 會議</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['📅','🗓️','⏰','⏳','⌚','🕐','🕓','🕖','🕘','👥','🤝','💼','🏢'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">工作 / 文件</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['📌','📍','📋','📝','📄','📑','🗂️','📁','✅','☑️','📊','📈','🖊️','✏️'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">重要 / 提醒</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['🎯','💡','🔑','⭐','🌟','💫','✨','🏆','🥇','🚩','🔥','💥','🆘','🔒'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">財務 / 金錢</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['💰','💴','💵','💸','🏦','💳','🧾','💲','🪙','💎','📤','📥','📦'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">慶祝 / 節日</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['🎉','🎊','🎈','🎁','🎀','🎂','🥳','🎆','🎇','🧨','🎵','🎶','🎤','💃'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">人員 / 部門</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['👩‍💼','👨‍💼','👩‍💻','🧑‍🤝‍🧑','🙋','💁','🤵','👏','💪','🫶','🙏','😊','😄'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">出差 / 外出</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['✈️','🚗','🚌','🚅','🏨','🗺️','🧳','🌏','📍','🛫','🛬','🌐','🏙️'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">裝飾 / 美化</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['🌸','🌺','🌻','🌹','🌷','🍀','🌿','🌈','☀️','🌙','⭐','🦋','🌊','🎀'].map(e=>`<button onclick="insertEmoji('${e}')" style="padding:4px 7px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;cursor:pointer;font-size:18px;line-height:1.2" title="${e}">${e}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+
     <div style="padding:10px 14px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue);margin-bottom:4px">
       💡 公告會以跑馬燈方式顯示在首頁，所有登入人員皆可看到。留空則不顯示公告。
     </div>
@@ -1541,33 +1610,47 @@ function openAnnouncementModal(){
   document.getElementById('modal-announcement').classList.add('open');
 }
 
+function insertEmoji(emoji){
+  const ta = document.getElementById('announcement-input');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const val = ta.value;
+  ta.value = val.slice(0,start) + emoji + val.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + emoji.length;
+  ta.focus();
+}
+
 async function saveAnnouncement(){
   const text = document.getElementById('announcement-input').value.trim();
-  // 先嘗試 update，若不存在則 insert
-  const rows = await sbGet('announcements','id=eq.main&limit=1');
-  let ok;
-  if(rows && rows.length > 0){
-    ok = await sbUpdate('announcements','main',{content:text, updated_at:nowStr()});
-  } else {
-    ok = await sbInsert('announcements',{id:'main', content:text, updated_at:nowStr()});
+  const r = await fetch(`${SB_URL}/rest/v1/announcements?id=eq.main`, {
+    method: 'PATCH',
+    headers: {...SB_HDR, 'Prefer': 'return=representation'},
+    body: JSON.stringify({content: text, updated_at: nowStr()})
+  });
+  if(!r.ok){
+    // 若不存在則新增
+    const r2 = await fetch(`${SB_URL}/rest/v1/announcements`, {
+      method: 'POST',
+      headers: {...SB_HDR, 'Prefer': 'return=representation'},
+      body: JSON.stringify({id:'main', content: text, updated_at: nowStr()})
+    });
+    if(!r2.ok){ showNotify('儲存失敗，請重試','error'); return; }
   }
-  if(ok){
-    closeModal('modal-announcement');
-    renderAnnouncement(text);
-    showNotify(text ? '公告已更新，所有人即時同步 ✓' : '公告已清除','success');
-  } else {
-    showNotify('儲存失敗，請重試','error');
-  }
+  closeModal('modal-announcement');
+  renderAnnouncement(text);
+  showNotify(text ? '公告已更新，所有人即時同步 ✓' : '公告已清除','success');
 }
 
 async function clearAnnouncement(){
-  const ok = await sbUpdate('announcements','main',{content:'', updated_at:nowStr()});
-  if(ok){
-    document.getElementById('announcement-input').value='';
-    closeModal('modal-announcement');
-    renderAnnouncement('');
-    showNotify('公告已清除','success');
-  }
+  const r = await fetch(`${SB_URL}/rest/v1/announcements?id=eq.main`, {
+    method: 'PATCH',
+    headers: {...SB_HDR, 'Prefer': 'return=representation'},
+    body: JSON.stringify({content: '', updated_at: nowStr()})
+  });
+  document.getElementById('announcement-input').value='';
+  closeModal('modal-announcement');
+  renderAnnouncement('');
+  showNotify('公告已清除','success');
 }
 
 // ── 修改密碼 ──
