@@ -16,7 +16,7 @@
     --radius:8px;--radius-lg:14px;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Segoe UI','Microsoft JhengHei',sans-serif;background:var(--cream);color:var(--gray-800);min-height:100vh;}
+  body{font-family:'Microsoft JhengHei','PingFang TC','Segoe UI',Arial,sans-serif;background:var(--cream);color:var(--gray-800);min-height:100vh;}
 
   /* LOGIN */
   #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#2a3f6f 60%,#1a2744 100%);}
@@ -488,13 +488,13 @@
                 <button onclick="changeSchMonth(1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">›</button>
               </div>
               <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
-                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:#e53e3e">日</div>
-                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">一</div>
-                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">二</div>
-                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">三</div>
-                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">四</div>
-                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:var(--gray-600)">五</div>
-                <div style="text-align:center;font-size:12px;font-weight:700;padding:6px 0;color:#3182ce">六</div>
+                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:#e53e3e">日</div>
+                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">一</div>
+                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">二</div>
+                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">三</div>
+                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">四</div>
+                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">五</div>
+                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:#3182ce">六</div>
               </div>
               <div id="sch-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
             </div>
@@ -1322,7 +1322,7 @@ function renderScheduleCalendar(){
     cell.style.cssText = `min-height:100px;background:${isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff'};border-radius:6px;padding:6px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'}`;
 
     const dayLabel = document.createElement('div');
-    dayLabel.style.cssText = `font-size:14px;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:4px`;
+    dayLabel.style.cssText = `font-size:14px;font-family:"Microsoft JhengHei","PingFang TC",Arial,sans-serif;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:4px`;
     dayLabel.textContent = day;
     cell.appendChild(dayLabel);
 
@@ -1331,7 +1331,7 @@ function renderScheduleCalendar(){
     dayItems.forEach(s=>{
       const tag = document.createElement('div');
       const color = getSchColor(s);
-      tag.style.cssText = `font-size:13px;padding:3px 7px;border-radius:3px;margin-bottom:2px;color:#fff;background:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default`;
+      tag.style.cssText = `font-size:13px;font-family:"Microsoft JhengHei","PingFang TC",Arial,sans-serif;font-weight:600;padding:3px 7px;border-radius:3px;margin-bottom:2px;color:#fff;background:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default`;
       tag.title = `${s.userName}：${s.leaveType}${s.note?'（'+s.note+'）':''}`;
       tag.textContent = `${s.userName} ${s.leaveType}`;
       cell.appendChild(tag);
