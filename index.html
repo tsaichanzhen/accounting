@@ -1418,7 +1418,8 @@ function exportSchedulePDF(){
   const PAGE_W=297, PAGE_H=210, MARGIN=10;
   let y=14;
   const monthLabel=`${schYear} 年 ${schMonth+1} 月`;
-  pdfText(doc,`展晟財會部 排休月曆　${monthLabel}`,MARGIN,y,PAGE_W-MARGIN*2,12,{fs:18,bold:true,color:'#1a2744',align:'center'});
+  pdfText(doc,'展晟財會部',MARGIN,y,PAGE_W-MARGIN*2,8,{fs:12,bold:false,color:'#C8962B',align:'center'});y+=9;
+  pdfText(doc,`排休月曆　${monthLabel}`,MARGIN,y,PAGE_W-MARGIN*2,12,{fs:20,bold:true,color:'#8B1A1A',align:'center'});
   y+=16;
   pdfText(doc,`列印時間：${nowStr()}`,MARGIN,y,100,6,{fs:8,color:'#666'});
   y+=10;
@@ -1609,14 +1610,16 @@ function exportPaymentPDF(){
   const HDR_H=11,ROW_H=8.5,FS_BODY=10;
   const typeLabel=currentPaymentType==='monthly'?'月結':'20轉月';
   let y=12;
-  pdfText(doc,`展晟財會部 繳單進度報表【${typeLabel}】`,MARGIN,y,TABLE_W,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=22;
+  pdfText(doc,'展晟財會部',MARGIN,y,TABLE_W,10,{fs:14,bold:false,color:'#C8962B',align:'center'});y+=10;
+  pdfText(doc,`繳單進度報表【${typeLabel}】`,MARGIN,y,TABLE_W,16,{fs:PDF_FS_TITLE,bold:true,color:'#8B1A1A',align:'center'});y+=18;
+  doc.setDrawColor(200,150,43);doc.setLineWidth(0.8);doc.line(MARGIN+20,y,PAGE_W-MARGIN-20,y);doc.setLineWidth(0.2);y+=6;
   pdfText(doc,`查詢月份：${refYear}年${parseInt(refMonth)}月　　列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=9;
   const cols=[{x:MARGIN,w:22,label:'區　域'},{x:MARGIN+22,w:32,label:'繳單進度'},{x:MARGIN+54,w:98,label:'備　　　　　　　　　　　　　　　　　　　註'},{x:MARGIN+152,w:38,label:'回　報　者'}];
-  doc.setFillColor(26,39,68);doc.rect(MARGIN,y,TABLE_W,HDR_H,'F');
+  doc.setFillColor(139,26,26);doc.rect(MARGIN,y,TABLE_W,HDR_H,'F');
   cols.forEach(c=>{pdfText(doc,c.label,c.x+0.5,y+0.5,c.w-1,HDR_H-1,{fs:PDF_FS_HDR,bold:true,color:'#ffffff',align:'center'});});
   y+=HDR_H;
   rows.forEach((r,i)=>{
-    const bg=i%2===0?[247,245,240]:[255,255,255];
+    const bg=i%2===0?[255,245,245]:[255,255,255];
     doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(MARGIN,y,TABLE_W,ROW_H,'F');
     doc.setDrawColor(210,208,215);doc.rect(MARGIN,y,TABLE_W,ROW_H);
     const isBelowMedian=r.date&&medianDate&&r.date<medianDate;
@@ -1649,18 +1652,18 @@ function exportWeeklyPDF(){
   filtered.forEach((w,wi)=>{
     if(wi>0)doc.addPage();
     let y=12;
-    pdfText(doc,'展晟財會部 週報彙整',MARGIN,y,TABLE_W,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=20;
+    pdfText(doc,'展晟財會部 週報彙整',MARGIN,y,TABLE_W,18,{fs:PDF_FS_TITLE,bold:true,color:'#8B1A1A',align:'center'});y+=20;
     pdfText(doc,`列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=10;
     const PERSON_H=11;
-    doc.setFillColor(26,39,68);doc.rect(MARGIN,y,TABLE_W,PERSON_H,'F');
+    doc.setFillColor(139,26,26);doc.rect(MARGIN,y,TABLE_W,PERSON_H,'F');
     const personDateRange=w.daterange||weekToDateRange(w.week);
     pdfText(doc,`【${w.userName}】  ${personDateRange}`,MARGIN+2,y+0.5,TABLE_W-4,PERSON_H-1,{fs:PDF_FS_BODY+1,bold:true,color:'#ffffff'});
     y+=PERSON_H+2;
     WR_LABELS.forEach((label,i)=>{
       const val=w['f'+(i+1)];
-      doc.setFillColor(237,241,248);doc.rect(MARGIN,y,TABLE_W,LABEL_H,'F');
+      doc.setFillColor(252,240,230);doc.rect(MARGIN,y,TABLE_W,LABEL_H,'F');
       doc.setDrawColor(200,198,210);doc.rect(MARGIN,y,TABLE_W,LABEL_H);
-      pdfText(doc,`${i+1}.  ${label}`,MARGIN+2,y+0.5,TABLE_W-4,LABEL_H-1,{fs:PDF_FS_BODY,bold:true,color:'#1a2744'});
+      pdfText(doc,`${i+1}.  ${label}`,MARGIN+2,y+0.5,TABLE_W-4,LABEL_H-1,{fs:PDF_FS_BODY,bold:true,color:'#8B1A1A'});
       y+=LABEL_H;
       const displayVal=(val&&val.trim())?val.trim():'無';
       const lines=[];
@@ -1677,7 +1680,7 @@ function exportWeeklyPDF(){
       });
       y+=1;
     });
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.5);doc.line(MARGIN,y+2,PAGE_W-MARGIN,y+2);doc.setLineWidth(0.2);
+    doc.setDrawColor(200,150,43);doc.setLineWidth(0.5);doc.line(MARGIN,y+2,PAGE_W-MARGIN,y+2);doc.setLineWidth(0.2);
   });
   doc.save('週報.pdf');showNotify('週報 PDF 已下載','success');
 }
@@ -1696,10 +1699,10 @@ function exportKPIPDF(){
   const FS_SUB_HDR=12,LINE_H_SUB=6;
   filtered.forEach((k,ki)=>{
     if(ki>0){doc.addPage();y=14;}
-    pdfText(doc,'2026年財會部 - 工作績效考核表',14,y,183,18,{fs:PDF_FS_TITLE,bold:true,color:'#1a2744',align:'center'});y+=22;
+    pdfText(doc,'2026年財會部 - 工作績效考核表',14,y,183,18,{fs:PDF_FS_TITLE,bold:true,color:'#8B1A1A',align:'center'});y+=22;
     pdfText(doc,`月份：${k.month}`,14,y,80,8,{fs:PDF_FS_BODY,bold:true,color:'#333'});
     pdfText(doc,`姓名：${k.userName}`,100,y,80,8,{fs:PDF_FS_BODY,bold:true,color:'#333'});y+=11;
-    doc.setFillColor(26,39,68);doc.rect(14,y,183,HDR_H,'F');
+    doc.setFillColor(139,26,26);doc.rect(14,y,183,HDR_H,'F');
     KC.forEach(c=>{pdfText(doc,c.label,c.x+1,y+0.5,c.w-2,HDR_H-1,{fs:PDF_FS_HDR,bold:true,color:'#ffffff',align:'center'});});
     y+=HDR_H;
     const rows=[
@@ -1717,10 +1720,10 @@ function exportKPIPDF(){
       const catN=r.cat?Math.ceil(r.cat.length/5):1;
       const rowH=Math.max(descTotalH,refN*LINE_H,catN*LINE_H)+PAD_T*2;
       if(y+rowH>278){doc.addPage();y=14;}
-      const bg=ri%2===0?[248,247,244]:[255,255,255];
+      const bg=ri%2===0?[255,245,245]:[255,255,255];
       doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(14,y,183,rowH,'F');
       doc.setDrawColor(210,208,215);doc.rect(14,y,183,rowH);
-      if(r.cat){const catLines=r.cat.split('\n');const catTotalH=catLines.length*LINE_H;const catStartY=y+(rowH-catTotalH)/2;catLines.forEach((line,li)=>{pdfText(doc,line,KC[0].x+1,catStartY+li*LINE_H,KC[0].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#1a2744',align:'center'});});}
+      if(r.cat){const catLines=r.cat.split('\n');const catTotalH=catLines.length*LINE_H;const catStartY=y+(rowH-catTotalH)/2;catLines.forEach((line,li)=>{pdfText(doc,line,KC[0].x+1,catStartY+li*LINE_H,KC[0].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#8B1A1A',align:'center'});});}
       const itemStartY=y+(rowH-LINE_H)/2;
       pdfText(doc,r.item,KC[1].x+1,itemStartY,KC[1].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#333',align:'center'});
       let descCurY=y+PAD_T;
@@ -1728,12 +1731,12 @@ function exportKPIPDF(){
         const isSubHdr=line.startsWith('【H】');
         const displayLine=isSubHdr?line.replace('【H】',''):line;
         const lh=isSubHdr?LINE_H_SUB:LINE_H;
-        pdfText(doc,displayLine,KC[2].x+1,descCurY,KC[2].w-2,lh,{fs:isSubHdr?FS_SUB_HDR:PDF_FS_BODY,bold:isSubHdr,color:isSubHdr?'#1a2744':'#333'});
+        pdfText(doc,displayLine,KC[2].x+1,descCurY,KC[2].w-2,lh,{fs:isSubHdr?FS_SUB_HDR:PDF_FS_BODY,bold:isSubHdr,color:isSubHdr?'#8B1A1A':'#333'});
         descCurY+=lh;
       });
       const kpiStartY=y+(rowH-LINE_H)/2;
-      pdfText(doc,String(r.kpi),KC[3].x+1,kpiStartY,KC[3].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#1a2744',align:'center'});
-      pdfText(doc,String(r.score),KC[4].x+1,kpiStartY,KC[4].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#1a2744',align:'center'});
+      pdfText(doc,String(r.kpi),KC[3].x+1,kpiStartY,KC[3].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#8B1A1A',align:'center'});
+      pdfText(doc,String(r.score),KC[4].x+1,kpiStartY,KC[4].w-2,LINE_H,{fs:PDF_FS_BODY,bold:true,color:'#8B1A1A',align:'center'});
       const refChunks=(r.ref||'').match(/.{1,10}/g)||[''];
       const refTotalH=refChunks.length*LINE_H;
       const refStartY=y+(rowH-refTotalH)/2;
@@ -1742,17 +1745,17 @@ function exportKPIPDF(){
     });
     const TOT_H=12;
     if(y+TOT_H>280){doc.addPage();y=14;}
-    doc.setFillColor(237,241,248);doc.rect(14,y,183,TOT_H,'F');
-    doc.setDrawColor(200,168,75);doc.setLineWidth(0.5);doc.rect(14,y,183,TOT_H);doc.setLineWidth(0.2);
-    pdfText(doc,'合　計',KC[1].x+1,y+1.5,KC[1].w-2,TOT_H-3,{fs:PDF_FS_BODY+1,bold:true,color:'#1a2744',align:'center'});
-    pdfText(doc,'100',KC[3].x+1,y+1.5,KC[3].w-2,TOT_H-3,{fs:PDF_FS_BODY+1,bold:true,color:'#c8a84b',align:'center'});
-    pdfText(doc,String(k.total),KC[4].x+1,y+1.5,KC[4].w-2,TOT_H-3,{fs:PDF_FS_BODY+2,bold:true,color:'#1a2744',align:'center'});
+    doc.setFillColor(252,240,230);doc.rect(14,y,183,TOT_H,'F');
+    doc.setDrawColor(200,150,43);doc.setLineWidth(0.5);doc.rect(14,y,183,TOT_H);doc.setLineWidth(0.2);
+    pdfText(doc,'合　計',KC[1].x+1,y+1.5,KC[1].w-2,TOT_H-3,{fs:PDF_FS_BODY+1,bold:true,color:'#8B1A1A',align:'center'});
+    pdfText(doc,'100',KC[3].x+1,y+1.5,KC[3].w-2,TOT_H-3,{fs:PDF_FS_BODY+1,bold:true,color:'#C8962B',align:'center'});
+    pdfText(doc,String(k.total),KC[4].x+1,y+1.5,KC[4].w-2,TOT_H-3,{fs:PDF_FS_BODY+2,bold:true,color:'#8B1A1A',align:'center'});
     y+=TOT_H+5;
     if(y+16>280){doc.addPage();y=14;}
     const EVAL_LABEL_H=8;
-    doc.setFillColor(255,252,240);doc.rect(14,y,183,EVAL_LABEL_H,'F');
-    doc.setDrawColor(200,168,75);doc.rect(14,y,183,EVAL_LABEL_H);
-    pdfText(doc,'成員對於本月表現進行評語及對部門建議（有成就感的事、希望下次可以改進的部分……等等）',16,y+0.5,175,EVAL_LABEL_H-1,{fs:PDF_FS_SMALL,bold:true,color:'#1a2744'});
+    doc.setFillColor(139,26,26);doc.rect(14,y,183,EVAL_LABEL_H,'F');
+    doc.setDrawColor(139,26,26);doc.rect(14,y,183,EVAL_LABEL_H);
+    pdfText(doc,'成員對於本月表現進行評語及對部門建議（有成就感的事、希望下次可以改進的部分……等等）',16,y+0.5,175,EVAL_LABEL_H-1,{fs:PDF_FS_SMALL,bold:true,color:'#8B1A1A'});
     y+=EVAL_LABEL_H;
     const refLines2=((k.reflection||'').match(/.{1,50}/g)||['（未填寫）']);
     const refH2=refLines2.length*8+5;
