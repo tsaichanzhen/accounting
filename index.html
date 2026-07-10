@@ -723,7 +723,7 @@
 
 <!-- MODAL: 公告編輯 -->
 <div class="modal-overlay" id="modal-announcement">
-  <div class="modal" style="width:560px;max-height:85vh;overflow-y:auto">
+  <div class="modal" style="width:560px">
     <div class="modal-title">📢 編輯公告內容</div>
     <div class="form-row">
       <div class="form-group">
@@ -731,10 +731,10 @@
         <textarea id="announcement-input" rows="3" placeholder="請輸入公告內容，可點下方 emoji 插入圖示" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:inherit;resize:vertical"></textarea>
       </div>
     </div>
-
-    <!-- Emoji 面板（JS動態產生） -->
-    <div id="emoji-panel" style="margin-bottom:14px"></div>
-
+    <!-- Emoji 面板 -->
+    <div style="border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:12px;margin-bottom:14px;max-height:300px;overflow-y:auto">
+      <div id="emoji-panel"></div>
+    </div>
     <div style="padding:10px 14px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue);margin-bottom:4px">
       💡 公告會以跑馬燈方式顯示在首頁，所有登入人員皆可看到。留空則不顯示公告。
     </div>
