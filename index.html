@@ -131,6 +131,7 @@
   .notify.success{background:var(--green);}
   .notify.error{background:var(--red);}
   @keyframes slideIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes marquee{0%{transform:translateX(100%);}100%{transform:translateX(-100%);}}
 
   /* MODAL */
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;}
@@ -218,12 +219,25 @@
         <div class="page-header">
           <div><div class="page-title">首頁總覽</div><div class="page-subtitle" id="dash-date">—</div></div>
         </div>
-        <div class="stats-row">
-          <div class="stat-card"><div class="stat-num" id="dash-payment-count">0</div><div class="stat-label">本月繳單筆數</div></div>
-          <div class="stat-card green"><div class="stat-num" id="dash-weekly-done">0</div><div class="stat-label">本週已填週報</div></div>
-          <div class="stat-card blue"><div class="stat-num" id="dash-kpi-done">0</div><div class="stat-label">本月已填KPI</div></div>
-          <div class="stat-card red"><div class="stat-num" id="dash-pending">0</div><div class="stat-label">繳單有備註筆數</div></div>
+
+        <!-- 公告跑馬燈 -->
+        <div id="announcement-bar" style="display:none;margin-bottom:20px;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow)">
+          <div style="background:linear-gradient(90deg,#8B1A1A,#b83232);padding:12px 18px;display:flex;align-items:center;gap:10px">
+              <span style="color:#fff;font-size:14px;font-weight:700;white-space:nowrap;letter-spacing:1px">📢 公告</span>
+              <div style="flex:1;overflow:hidden;position:relative;height:32px">
+              <div id="marquee-text" style="position:absolute;white-space:nowrap;color:#fff;font-size:22px;font-weight:600;line-height:32px;animation:marquee 18s linear infinite"></div>
+            </div>
+            <button id="edit-announcement-btn" class="admin-only" onclick="openAnnouncementModal()" style="display:none;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;cursor:pointer;white-space:nowrap">✏️ 編輯</button>
+          </div>
         </div>
+
+        <!-- 無公告時的新增按鈕（管理員限定） -->
+        <div id="announcement-empty" class="admin-only" style="display:none;margin-bottom:20px">
+          <button onclick="openAnnouncementModal()" style="width:100%;padding:12px;border:2px dashed var(--gray-200);border-radius:var(--radius-lg);background:#fff;color:var(--gray-400);font-size:13px;cursor:pointer;font-family:inherit">
+            📢 點此新增公告（僅管理員可見此按鈕）
+          </button>
+        </div>
+
         <div class="card">
           <div class="card-title">📌 最新繳單紀錄</div>
           <div class="table-wrap"><table>
@@ -707,6 +721,27 @@
   </div>
 </div>
 
+<!-- MODAL: 公告編輯 -->
+<div class="modal-overlay" id="modal-announcement">
+  <div class="modal" style="width:500px">
+    <div class="modal-title">📢 編輯公告內容</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>公告內容</label>
+        <textarea id="announcement-input" rows="4" placeholder="請輸入公告內容，例如：本週五(7/12)下午3點請至會議室開會，請準時出席。" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:inherit;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div style="padding:10px 14px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue);margin-bottom:4px">
+      💡 公告會以跑馬燈方式顯示在首頁，所有登入人員皆可看到。留空則不顯示公告。
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="clearAnnouncement()">清除公告</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-announcement')">取消</button>
+      <button class="btn btn-primary" onclick="saveAnnouncement()">儲存公告</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Add User -->
 <div class="modal-overlay" id="modal-adduser">
   <div class="modal" style="width:420px">
@@ -792,6 +827,7 @@ async function enterApp(){
   renderPaymentTable();renderWeeklyTable();renderKPITable();loadMailSetting();
   initScheduleForm();
   renderScheduleCalendar();
+  await loadAnnouncement();
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('zh-TW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   // 啟動即時更新（每30秒自動重新載入資料）
   startAutoRefresh();
@@ -809,7 +845,7 @@ function startAutoRefresh(){
     const activeSection = document.querySelector('.section.active');
     if(!activeSection) return;
     const id = activeSection.id.replace('sec-','');
-    if(id==='dashboard') refreshDash();
+    if(id==='dashboard') { refreshDash(); loadAnnouncement(); }
     if(id==='payment') { renderPaymentTable(); refreshDash(); }
     if(id==='weekly') renderWeeklyTable();
     if(id==='kpi') renderKPITable();
@@ -864,15 +900,8 @@ function showSection(id,el){
 // ── DASHBOARD ──
 function refreshDash(){
   const payments=CACHE.payments,weeklies=CACHE.weeklies,kpis=CACHE.kpis;
-  const thisMonth=new Date().toISOString().slice(0,7);
-  const thisWeek=getISOWeek(new Date());
   const myP=payments;
   const myW=currentUser.role==='admin'?weeklies:weeklies.filter(w=>w.userId===currentUser.id);
-  const myK=currentUser.role==='admin'?kpis:kpis.filter(k=>k.userId===currentUser.id);
-  document.getElementById('dash-payment-count').textContent=myP.filter(p=>p.fillDate&&p.fillDate.startsWith(thisMonth)).length;
-  document.getElementById('dash-weekly-done').textContent=myW.filter(w=>w.week===thisWeek).length;
-  document.getElementById('dash-kpi-done').textContent=myK.filter(k=>k.month===thisMonth).length;
-  document.getElementById('dash-pending').textContent=myP.filter(p=>p.note&&p.note.trim()).length;
   const pt=document.getElementById('dash-payment-table');
   const rp=myP.slice(0,5);
   pt.innerHTML=rp.length?rp.map(p=>`<tr><td><span class="badge badge-blue">${p.area}</span></td><td>${p.fillDate||'—'}</td><td>${p.date||'—'}</td><td>${p.note||'—'}</td><td>${p.user}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">尚無資料</td></tr>';
@@ -1471,6 +1500,74 @@ function exportSchedulePDF(){
   }
   doc.save(`排休月曆_${schYear}${String(schMonth+1).padStart(2,'0')}.pdf`);
   showNotify('月曆 PDF 已下載','success');
+}
+
+// ── 公告跑馬燈 ──
+async function loadAnnouncement(){
+  try{
+    const rows = await sbGet('announcements','id=eq.main&limit=1');
+    const text = (rows && rows.length > 0) ? (rows[0].content||'') : '';
+    renderAnnouncement(text);
+  } catch(e){
+    renderAnnouncement('');
+  }
+}
+
+function renderAnnouncement(text){
+  const bar = document.getElementById('announcement-bar');
+  const empty = document.getElementById('announcement-empty');
+  const marquee = document.getElementById('marquee-text');
+  if(text && text.trim()){
+    bar.style.display='block';
+    if(empty) empty.style.display='none';
+    marquee.textContent = text;
+    const speed = Math.max(6, text.length * 0.2);
+    marquee.style.animation = `marquee ${speed}s linear infinite`;
+  } else {
+    bar.style.display='none';
+    if(currentUser && currentUser.role==='admin' && empty){
+      empty.style.display='block';
+    }
+  }
+  if(currentUser && currentUser.role==='admin'){
+    const editBtn = document.getElementById('edit-announcement-btn');
+    if(editBtn) editBtn.style.display='block';
+  }
+}
+
+function openAnnouncementModal(){
+  const marquee = document.getElementById('marquee-text');
+  document.getElementById('announcement-input').value = marquee.textContent||'';
+  document.getElementById('modal-announcement').classList.add('open');
+}
+
+async function saveAnnouncement(){
+  const text = document.getElementById('announcement-input').value.trim();
+  // 先嘗試 update，若不存在則 insert
+  const rows = await sbGet('announcements','id=eq.main&limit=1');
+  let ok;
+  if(rows && rows.length > 0){
+    ok = await sbUpdate('announcements','main',{content:text, updated_at:nowStr()});
+  } else {
+    ok = await sbInsert('announcements',{id:'main', content:text, updated_at:nowStr()});
+  }
+  if(ok){
+    closeModal('modal-announcement');
+    renderAnnouncement(text);
+    showNotify(text ? '公告已更新，所有人即時同步 ✓' : '公告已清除','success');
+  } else {
+    showNotify('儲存失敗，請重試','error');
+  }
+}
+
+async function clearAnnouncement(){
+  const ok = await sbUpdate('announcements','main',{content:'', updated_at:nowStr()});
+  if(ok){
+    document.getElementById('announcement-input').value='';
+    closeModal('modal-announcement');
+    renderAnnouncement('');
+    showNotify('公告已清除','success');
+  }
 }
 
 // ── 修改密碼 ──
