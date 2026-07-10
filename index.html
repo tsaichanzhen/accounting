@@ -1308,7 +1308,7 @@ function renderScheduleCalendar(){
   // 空格
   for(let i=0;i<firstDay;i++){
     const d=document.createElement('div');
-    d.style.cssText='min-height:80px;background:#f9f9f9;border-radius:4px;padding:4px';
+    d.style.cssText='min-height:100px;background:#f9f9f9;border-radius:4px;padding:4px';
     grid.appendChild(d);
   }
 
@@ -1319,10 +1319,10 @@ function renderScheduleCalendar(){
     const isWeekend = dow===0||dow===6;
 
     const cell = document.createElement('div');
-    cell.style.cssText = `min-height:80px;background:${isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff'};border-radius:6px;padding:4px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'}`;
+    cell.style.cssText = `min-height:100px;background:${isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff'};border-radius:6px;padding:6px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'}`;
 
     const dayLabel = document.createElement('div');
-    dayLabel.style.cssText = `font-size:12px;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:3px`;
+    dayLabel.style.cssText = `font-size:14px;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:4px`;
     dayLabel.textContent = day;
     cell.appendChild(dayLabel);
 
@@ -1331,7 +1331,7 @@ function renderScheduleCalendar(){
     dayItems.forEach(s=>{
       const tag = document.createElement('div');
       const color = getSchColor(s);
-      tag.style.cssText = `font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;color:#fff;background:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default`;
+      tag.style.cssText = `font-size:13px;padding:3px 7px;border-radius:3px;margin-bottom:2px;color:#fff;background:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default`;
       tag.title = `${s.userName}：${s.leaveType}${s.note?'（'+s.note+'）':''}`;
       tag.textContent = `${s.userName} ${s.leaveType}`;
       cell.appendChild(tag);
