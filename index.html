@@ -227,12 +227,12 @@
               <div style="flex:1;overflow:hidden;position:relative;height:32px">
               <div id="marquee-text" style="position:absolute;white-space:nowrap;color:#fff;font-size:22px;font-weight:600;line-height:32px;animation:marquee 18s linear infinite"></div>
             </div>
-            <button id="edit-announcement-btn" class="admin-only" onclick="openAnnouncementModal()" style="display:none;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;cursor:pointer;white-space:nowrap">✏️ 編輯</button>
+            <button id="edit-announcement-btn" onclick="openAnnouncementModal()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;cursor:pointer;white-space:nowrap">✏️ 編輯</button>
           </div>
         </div>
 
         <!-- 無公告時的新增按鈕（管理員限定） -->
-        <div id="announcement-empty" class="admin-only" style="display:none;margin-bottom:20px">
+        <div id="announcement-empty" style="display:none;margin-bottom:20px">
           <button onclick="openAnnouncementModal()" style="width:100%;padding:12px;border:2px dashed var(--gray-200);border-radius:var(--radius-lg);background:#fff;color:var(--gray-400);font-size:13px;cursor:pointer;font-family:inherit">
             📢 點此新增公告（僅管理員可見此按鈕）
           </button>
@@ -1529,14 +1529,10 @@ function renderAnnouncement(text){
     marquee.style.animation = `marquee ${speed}s linear infinite`;
   } else {
     bar.style.display='none';
-    if(currentUser && currentUser.role==='admin' && empty){
-      empty.style.display='block';
-    }
+    if(empty) empty.style.display='block';
   }
-  if(currentUser && currentUser.role==='admin'){
-    const editBtn = document.getElementById('edit-announcement-btn');
-    if(editBtn) editBtn.style.display='block';
-  }
+  const editBtn = document.getElementById('edit-announcement-btn');
+  if(editBtn) editBtn.style.display='block';
 }
 
 function openAnnouncementModal(){
