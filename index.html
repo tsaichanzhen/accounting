@@ -175,6 +175,9 @@
     <input type="password" id="login-pass" placeholder="請輸入密碼">
     <button class="login-btn" onclick="doLogin()">登 入</button>
     <div class="login-err" id="login-err"></div>
+    <div style="text-align:center;margin-top:14px">
+      <a onclick="openForgotPassword()" style="font-size:13px;color:var(--gray-400);cursor:pointer;text-decoration:underline">忘記密碼？</a>
+    </div>
   </div>
 </div>
 
@@ -344,7 +347,10 @@
       <div class="section admin-only" id="sec-users">
         <div class="page-header">
           <div><div class="page-title">帳號管理</div><div class="page-subtitle">管理財會部人員登入帳號</div></div>
-          <button class="btn btn-primary" onclick="openAddUserModal()">＋ 新增帳號</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-outline" onclick="openResetPwdModal()">🔐 重設密碼</button>
+            <button class="btn btn-primary" onclick="openAddUserModal()">＋ 新增帳號</button>
+          </div>
         </div>
         <div class="card">
           <div class="card-title">👥 人員帳號列表</div>
@@ -746,6 +752,59 @@
   </div>
 </div>
 
+<!-- MODAL: 忘記密碼 -->
+<div class="modal-overlay" id="modal-forgot">
+  <div class="modal" style="width:420px">
+    <div class="modal-title">🔑 忘記密碼</div>
+    <div id="forgot-step1">
+      <div class="form-group" style="margin-bottom:16px">
+        <label>請輸入您的帳號</label>
+        <input type="text" id="forgot-username" placeholder="請輸入登入帳號" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:14px;font-family:inherit">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('modal-forgot')">取消</button>
+        <button class="btn btn-primary" onclick="showPasswordHint()">查詢密碼提示</button>
+      </div>
+    </div>
+    <div id="forgot-step2" style="display:none">
+      <div style="padding:16px;background:var(--gray-100);border-radius:var(--radius);margin-bottom:16px">
+        <div style="font-size:12px;color:var(--gray-400);margin-bottom:6px;font-weight:600">📌 密碼提示</div>
+        <div id="hint-text" style="font-size:15px;color:var(--navy);font-weight:600"></div>
+      </div>
+      <div style="padding:12px 14px;background:var(--orange-light);border-radius:var(--radius);font-size:13px;color:var(--orange);margin-bottom:16px">
+        ⚠️ 若仍無法想起密碼，請聯絡管理員重新設定。
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="resetForgotStep()">重新查詢</button>
+        <button class="btn btn-primary" onclick="closeModal('modal-forgot')">關閉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 管理員重設密碼 -->
+<div class="modal-overlay" id="modal-resetpwd">
+  <div class="modal" style="width:420px">
+    <div class="modal-title">🔐 重設人員密碼</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>選擇人員</label>
+      <select id="reset-user-sel" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>新密碼</label>
+      <input type="text" id="reset-new-pass" placeholder="輸入新密碼（至少6位）" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>密碼提示（可選）</label>
+      <input type="text" id="reset-hint" placeholder="更新密碼提示" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-resetpwd')">取消</button>
+      <button class="btn btn-primary" onclick="adminResetPassword()">確認重設</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Add User -->
 <div class="modal-overlay" id="modal-adduser">
   <div class="modal" style="width:420px">
@@ -759,6 +818,15 @@
       <div class="form-group"><label>角色</label>
         <select id="au-role"><option value="user">一般人員</option><option value="admin">管理員</option></select>
       </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>密碼提示（忘記密碼時顯示）</label>
+        <input type="text" id="au-hint" placeholder="例：我的生日、寵物名字…">
+      </div>
+    </div>
+    <div style="padding:8px 12px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue);margin-bottom:4px">
+      💡 密碼提示不要直接寫密碼，填寫可幫助記憶的線索即可
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-adduser')">取消</button>
@@ -872,7 +940,7 @@ async function loadAllCache(){
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
   CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
-  CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created}));
+  CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||''}));
   CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,endDate:s.end_date,note:s.note,createdAt:s.created_at}));
 }
 
@@ -1187,7 +1255,7 @@ function sendKPIMail(){
 
 // ── USERS ──
 function openAddUserModal(){
-  ['au-name','au-username','au-pass'].forEach(id=>document.getElementById(id).value='');
+  ['au-name','au-username','au-pass','au-hint'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('au-role').value='user';
   document.getElementById('modal-adduser').classList.add('open');
 }
@@ -1196,14 +1264,66 @@ async function saveUser(){
   const username=document.getElementById('au-username').value.trim();
   const password=document.getElementById('au-pass').value.trim();
   const role=document.getElementById('au-role').value;
+  const hint=document.getElementById('au-hint').value.trim();
   if(!name||!username||!password){showNotify('請填寫完整資料','error');return;}
   if(CACHE.accounts.find(a=>a.username===username)){showNotify('帳號已存在','error');return;}
-  const rec={id:pid(),name,username,password,role,active:true,created:nowStr()};
+  const rec={id:pid(),name,username,password,role,hint,active:true,created:nowStr()};
   const ok=await sbInsert('accounts',rec);
   if(ok){
     CACHE.accounts.push(rec);
     closeModal('modal-adduser');renderUserTable();refreshUserSelects();showNotify(`已新增帳號：${name}`,'success');
   }else{showNotify('新增失敗，請重試','error');}
+}
+
+// ── 忘記密碼 ──
+function openForgotPassword(){
+  document.getElementById('forgot-username').value='';
+  document.getElementById('forgot-step1').style.display='block';
+  document.getElementById('forgot-step2').style.display='none';
+  document.getElementById('modal-forgot').classList.add('open');
+}
+async function showPasswordHint(){
+  const username = document.getElementById('forgot-username').value.trim();
+  if(!username){showNotify('請輸入帳號','error');return;}
+  const rows = await sbGet('accounts',`username=eq.${encodeURIComponent(username)}&active=eq.true`);
+  if(!rows||rows.length===0){
+    document.getElementById('forgot-username').style.border='1.5px solid var(--red)';
+    showNotify('查無此帳號','error');return;
+  }
+  const hint = rows[0].hint||'';
+  document.getElementById('hint-text').textContent = hint || '（此帳號未設定密碼提示，請聯絡管理員重設密碼）';
+  document.getElementById('forgot-step1').style.display='none';
+  document.getElementById('forgot-step2').style.display='block';
+}
+function resetForgotStep(){
+  document.getElementById('forgot-username').value='';
+  document.getElementById('forgot-username').style.border='1.5px solid var(--gray-200)';
+  document.getElementById('forgot-step1').style.display='block';
+  document.getElementById('forgot-step2').style.display='none';
+}
+
+// ── 管理員重設密碼 ──
+function openResetPwdModal(){
+  const sel = document.getElementById('reset-user-sel');
+  sel.innerHTML = CACHE.accounts.map(a=>`<option value="${a.id}">${a.name}（${a.username}）</option>`).join('');
+  document.getElementById('reset-new-pass').value='';
+  document.getElementById('reset-hint').value='';
+  document.getElementById('modal-resetpwd').classList.add('open');
+}
+async function adminResetPassword(){
+  const userId = document.getElementById('reset-user-sel').value;
+  const newPass = document.getElementById('reset-new-pass').value.trim();
+  const newHint = document.getElementById('reset-hint').value.trim();
+  if(!newPass||newPass.length<6){showNotify('新密碼至少需要6位','error');return;}
+  const updateData = {password:newPass};
+  if(newHint) updateData.hint = newHint;
+  const ok = await sbUpdate('accounts', userId, updateData);
+  if(ok){
+    const acc = CACHE.accounts.find(a=>a.id===userId);
+    if(acc){ acc.password=newPass; if(newHint) acc.hint=newHint; }
+    closeModal('modal-resetpwd');
+    showNotify(`密碼已重設完成 ✓`,'success');
+  }else{showNotify('重設失敗，請重試','error');}
 }
 function renderUserTable(){
   const accounts=CACHE.accounts;
