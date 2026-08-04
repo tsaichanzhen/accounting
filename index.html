@@ -442,6 +442,12 @@
               <input type="password" id="pwd-confirm" placeholder="再次輸入新密碼">
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>密碼提示（可選）</label>
+              <input type="text" id="pwd-hint" placeholder="例：我的生日、寵物名字… 忘記密碼時可查看此提示">
+            </div>
+          </div>
           <div style="margin-top:4px;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue)">
             💡 密碼修改後，下次登入請使用新密碼
           </div>
@@ -967,6 +973,11 @@ function showSection(id,el){
   if(id==='myhistory') renderMyHistory();
   if(id==='dashboard') refreshDash();
   if(id==='schedule'){ initScheduleForm(); renderScheduleCalendar(); }
+  if(id==='changepwd'){
+    const acc = CACHE.accounts.find(a=>a.id===currentUser.id);
+    const hintEl = document.getElementById('pwd-hint');
+    if(hintEl && acc) hintEl.placeholder = acc.hint ? `目前提示：${acc.hint}` : '例：我的生日、寵物名字…';
+  }
 }
 
 // ── DASHBOARD ──
@@ -1740,15 +1751,17 @@ async function clearAnnouncement(){
 
 // ── 修改密碼 ──
 async function changePassword(){
-  const current = document.getElementById('pwd-current').value.trim();
-  const newPwd  = document.getElementById('pwd-new').value.trim();
-  const confirm = document.getElementById('pwd-confirm').value.trim();
+  const current  = document.getElementById('pwd-current').value.trim();
+  const newPwd   = document.getElementById('pwd-new').value.trim();
+  const confirm  = document.getElementById('pwd-confirm').value.trim();
+  const hint     = document.getElementById('pwd-hint').value.trim();
   const statusEl = document.getElementById('pwd-status');
 
   if(!current||!newPwd||!confirm){
     statusEl.style.color='var(--red)'; statusEl.textContent='請填寫所有欄位'; return;
   }
-  if(current !== currentUser.password && current !== CACHE.accounts.find(a=>a.id===currentUser.id)?.password){
+  const acc = CACHE.accounts.find(a=>a.id===currentUser.id);
+  if(!acc || current !== acc.password){
     statusEl.style.color='var(--red)'; statusEl.textContent='目前密碼錯誤'; return;
   }
   if(newPwd.length < 6){
@@ -1757,14 +1770,15 @@ async function changePassword(){
   if(newPwd !== confirm){
     statusEl.style.color='var(--red)'; statusEl.textContent='兩次輸入的新密碼不一致'; return;
   }
-  const ok = await sbUpdate('accounts', currentUser.id, {password: newPwd});
+  const updateData = {password: newPwd};
+  if(hint) updateData.hint = hint;
+  const ok = await sbUpdate('accounts', currentUser.id, updateData);
   if(ok){
-    // 更新快取
-    const acc = CACHE.accounts.find(a=>a.id===currentUser.id);
-    if(acc) acc.password = newPwd;
+    if(acc){ acc.password=newPwd; if(hint) acc.hint=hint; }
     document.getElementById('pwd-current').value='';
     document.getElementById('pwd-new').value='';
     document.getElementById('pwd-confirm').value='';
+    document.getElementById('pwd-hint').value='';
     statusEl.style.color='var(--green)'; statusEl.textContent='✓ 密碼已成功修改！';
     setTimeout(()=>statusEl.textContent='', 3000);
   } else {
