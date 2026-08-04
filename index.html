@@ -772,6 +772,83 @@
   </div>
 </div>
 
+<!-- MODAL: 編輯部門排休 -->
+<div class="modal-overlay" id="modal-edit-schedule">
+  <div class="modal" style="width:480px">
+    <div class="modal-title">✏️ 編輯排休紀錄</div>
+    <input type="hidden" id="edit-sch-id">
+    <div class="form-group" style="margin-bottom:12px">
+      <label>假別</label>
+      <select id="edit-sch-type" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+        <option>事假</option><option>特休</option><option>補休</option>
+        <option>婚假</option><option>產檢假</option><option>回診</option>
+        <option>公假</option><option>教育訓練</option><option>集團會議</option>
+        <option>國內出差</option><option>電話接聽</option>
+      </select>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>開始日期</label>
+        <input type="date" id="edit-sch-start" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+      <div class="form-group">
+        <label>結束日期</label>
+        <input type="date" id="edit-sch-end" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>備註</label>
+      <input type="text" id="edit-sch-note" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-schedule')">取消</button>
+      <button class="btn btn-primary" onclick="updateSchedule()">儲存修改</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 編輯個人行程 -->
+<div class="modal-overlay" id="modal-edit-personal">
+  <div class="modal" style="width:480px">
+    <div class="modal-title">✏️ 編輯個人行程</div>
+    <input type="hidden" id="edit-ps-id">
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>日期</label>
+        <input type="date" id="edit-ps-date" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+      <div class="form-group">
+        <label>時間（可選）</label>
+        <input type="time" id="edit-ps-time" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>行程標題</label>
+        <input type="text" id="edit-ps-title" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+      </div>
+      <div class="form-group">
+        <label>假別/類型（可選）</label>
+        <select id="edit-ps-leave" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <option value="">── 不選 ──</option>
+          <option>事假</option><option>特休</option><option>補休</option>
+          <option>婚假</option><option>產檢假</option><option>回診</option>
+          <option>公假</option><option>教育訓練</option><option>集團會議</option>
+          <option>國內出差</option><option>電話接聽</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>備註（可選）</label>
+      <textarea id="edit-ps-note" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:vertical"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-personal')">取消</button>
+      <button class="btn btn-primary" onclick="updatePersonalSchedule()">儲存修改</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 個人行程新增 -->
 <div class="modal-overlay" id="modal-personal">
   <div class="modal" style="width:480px">
@@ -1532,6 +1609,39 @@ async function deletePersonalSchedule(id){
     renderPersonalCalendar();showNotify('已刪除','success');
   }
 }
+
+function openEditPersonal(id){
+  const s=(CACHE.personalSchedules||[]).find(s=>s.id===id);
+  if(!s)return;
+  document.getElementById('edit-ps-id').value=id;
+  // 拆解時間（若標題以 HH:MM 開頭）
+  const timeMatch=s.title.match(/^(\d{2}:\d{2})\s(.+)$/);
+  document.getElementById('edit-ps-date').value=s.date;
+  document.getElementById('edit-ps-time').value=timeMatch?timeMatch[1]:'';
+  document.getElementById('edit-ps-title').value=timeMatch?timeMatch[2]:s.title;
+  document.getElementById('edit-ps-leave').value=s.leaveType||'';
+  document.getElementById('edit-ps-note').value=s.note||'';
+  document.getElementById('modal-edit-personal').classList.add('open');
+}
+
+async function updatePersonalSchedule(){
+  const id=document.getElementById('edit-ps-id').value;
+  const date=document.getElementById('edit-ps-date').value;
+  const time=document.getElementById('edit-ps-time').value;
+  const titleRaw=document.getElementById('edit-ps-title').value.trim();
+  const leave=document.getElementById('edit-ps-leave').value;
+  const note=document.getElementById('edit-ps-note').value.trim();
+  if(!date||!titleRaw){showNotify('請填寫日期與行程標題','error');return;}
+  const title=time?`${time} ${titleRaw}`:titleRaw;
+  const ok=await sbUpdate('personal_schedules',id,{date,title,leave_type:leave,note});
+  if(ok){
+    const s=CACHE.personalSchedules.find(s=>s.id===id);
+    if(s){s.date=date;s.title=title;s.leaveType=leave;s.note=note;}
+    closeModal('modal-edit-personal');
+    renderPersonalCalendar();
+    showNotify('行程已更新 ✓','success');
+  }else{showNotify('更新失敗，請重試','error');}
+}
 function renderPersonalCalendar(){
   document.getElementById('personal-month-label').textContent=`${psYear} 年 ${psMonth+1} 月`;
   const grid=document.getElementById('personal-calendar-grid');
@@ -1569,7 +1679,17 @@ function renderPersonalCalendar(){
   }
   const sorted=[...myItems].sort((a,b)=>a.date.localeCompare(b.date));
   const tb=document.getElementById('personal-list-table');
-  if(tb) tb.innerHTML=sorted.length?sorted.map(s=>`<tr><td>${s.date}</td><td style="font-weight:600">${s.title}</td><td>${s.leaveType||'—'}</td><td>${s.note||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="deletePersonalSchedule('${s.id}')">刪除</button></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">當月無個人行程</td></tr>';
+  if(tb) tb.innerHTML=sorted.length?sorted.map(s=>`
+    <tr>
+      <td>${s.date}</td>
+      <td style="font-weight:600">${s.title}</td>
+      <td>${s.leaveType||'—'}</td>
+      <td>${s.note||'—'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-outline" onclick="openEditPersonal('${s.id}')">編輯</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePersonalSchedule('${s.id}')">刪除</button>
+      </td>
+    </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">當月無個人行程</td></tr>';
 }
 
 // ── 今日工作提醒 ──
@@ -1752,9 +1872,41 @@ function renderSchList(){
       <td>${s.startDate}</td>
       <td>${s.endDate}</td>
       <td>${s.note||'—'}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteSchedule('${s.id}')">刪除</button></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-outline" onclick="openEditSchedule('${s.id}')">編輯</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteSchedule('${s.id}')">刪除</button>
+      </td>
     </tr>`).join('')
     : '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:24px">當月無排休紀錄</td></tr>';
+}
+
+function openEditSchedule(id){
+  const s = (CACHE.schedules||[]).find(s=>s.id===id);
+  if(!s) return;
+  document.getElementById('edit-sch-id').value = id;
+  document.getElementById('edit-sch-type').value = s.leaveType;
+  document.getElementById('edit-sch-start').value = s.startDate;
+  document.getElementById('edit-sch-end').value = s.endDate;
+  document.getElementById('edit-sch-note').value = s.note||'';
+  document.getElementById('modal-edit-schedule').classList.add('open');
+}
+
+async function updateSchedule(){
+  const id = document.getElementById('edit-sch-id').value;
+  const leaveType = document.getElementById('edit-sch-type').value;
+  const startDate = document.getElementById('edit-sch-start').value;
+  const endDate = document.getElementById('edit-sch-end').value;
+  const note = document.getElementById('edit-sch-note').value.trim();
+  if(!startDate||!endDate){showNotify('請選擇日期','error');return;}
+  if(endDate<startDate){showNotify('結束日期不能早於開始日期','error');return;}
+  const ok = await sbUpdate('schedules', id, {leave_type:leaveType, start_date:startDate, end_date:endDate, note});
+  if(ok){
+    const s = CACHE.schedules.find(s=>s.id===id);
+    if(s){s.leaveType=leaveType;s.startDate=startDate;s.endDate=endDate;s.note=note;}
+    closeModal('modal-edit-schedule');
+    renderScheduleCalendar();
+    showNotify('排休已更新 ✓','success');
+  } else { showNotify('更新失敗，請重試','error'); }
 }
 
 async function saveSchedule(){
