@@ -203,6 +203,7 @@
         <div class="nav-item" onclick="showSection('weekly',this)"><span class="icon">📋</span>週報填寫</div>
         <div class="nav-item" onclick="showSection('kpi',this)"><span class="icon">🎯</span>月度 KPI</div>
         <div class="nav-item" onclick="showSection('schedule',this)"><span class="icon">🗓️</span>排休月曆</div>
+        <div class="nav-item" onclick="showSection('personal',this)"><span class="icon">📆</span>個人行事曆</div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
@@ -454,6 +455,44 @@
           <div class="modal-footer" style="justify-content:flex-start;margin-top:12px">
             <button class="btn btn-primary" onclick="changePassword()">確認修改</button>
             <span id="pwd-status" style="font-size:13px;margin-left:12px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 個人行事曆 -->
+      <div class="section" id="sec-personal">
+        <div class="page-header">
+          <div><div class="page-title">個人行事曆</div><div class="page-subtitle">只有您自己可以看到這裡的內容</div></div>
+          <button class="btn btn-primary" onclick="openPersonalModal()">＋ 新增行程</button>
+        </div>
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+          <!-- 左側月曆 -->
+          <div style="flex:1;min-width:0">
+            <div class="card" style="padding:20px">
+              <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px">
+                <button onclick="changePersonalMonth(-1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">‹</button>
+                <div style="font-size:16px;font-weight:700;color:var(--navy);min-width:130px;text-align:center" id="personal-month-label"></div>
+                <button onclick="changePersonalMonth(1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">›</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
+                <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;color:#e53e3e;font-family:'Microsoft JhengHei',Arial">日</div>
+                <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;color:var(--gray-600);font-family:'Microsoft JhengHei',Arial">一</div>
+                <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;color:var(--gray-600);font-family:'Microsoft JhengHei',Arial">二</div>
+                <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;color:var(--gray-600);font-family:'Microsoft JhengHei',Arial">三</div>
+                <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;color:var(--gray-600);font-family:'Microsoft JhengHei',Arial">四</div>
+                <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;color:var(--gray-600);font-family:'Microsoft JhengHei',Arial">五</div>
+                <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;color:#3182ce;font-family:'Microsoft JhengHei',Arial">六</div>
+              </div>
+              <div id="personal-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+            </div>
+            <!-- 當月行程列表 -->
+            <div class="card" style="margin-top:0">
+              <div class="card-title">📋 當月行程列表</div>
+              <div class="table-wrap"><table>
+                <thead><tr><th>日期</th><th>標題</th><th>假別/類型</th><th>備註</th><th>操作</th></tr></thead>
+                <tbody id="personal-list-table"></tbody>
+              </table></div>
+            </div>
           </div>
         </div>
       </div>
@@ -733,6 +772,61 @@
   </div>
 </div>
 
+<!-- MODAL: 個人行程新增 -->
+<div class="modal-overlay" id="modal-personal">
+  <div class="modal" style="width:480px">
+    <div class="modal-title">📆 新增個人行程</div>
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>日期</label>
+        <input type="date" id="ps-date" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+      <div class="form-group">
+        <label>時間（可選）</label>
+        <input type="time" id="ps-time" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>行程標題</label>
+        <input type="text" id="ps-title" placeholder="例：繳交報表、部門會議…" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+      </div>
+      <div class="form-group">
+        <label>假別/類型（可選）</label>
+        <select id="ps-leave" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <option value="">── 不選 ──</option>
+          <option>事假</option><option>特休</option><option>補休</option>
+          <option>婚假</option><option>產檢假</option><option>回診</option>
+          <option>公假</option><option>教育訓練</option><option>集團會議</option>
+          <option>國內出差</option><option>電話接聽</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>備註（可選）</label>
+        <textarea id="ps-note" rows="2" placeholder="補充說明…" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-personal')">取消</button>
+      <button class="btn btn-primary" onclick="savePersonalSchedule()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 今日工作提醒 -->
+<div class="modal-overlay" id="modal-today-reminder">
+  <div class="modal" style="width:460px">
+    <div class="modal-title">📅 今日行程提醒</div>
+    <div id="today-reminder-content"></div>
+    <div style="margin-top:8px;font-size:12px;color:var(--gray-400);text-align:center">祝您今天工作順利！</div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn btn-primary" onclick="closeModal('modal-today-reminder')">知道了，開始工作 💪</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 公告編輯 -->
 <div class="modal-overlay" id="modal-announcement">
   <div class="modal" style="width:560px">
@@ -906,6 +1000,8 @@ async function enterApp(){
   initScheduleForm();
   renderScheduleCalendar();
   await loadAnnouncement();
+  // 登入後顯示今日行程提醒
+  setTimeout(()=>showTodayReminder(), 800);
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('zh-TW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   // 啟動即時更新（每30秒自動重新載入資料）
   startAutoRefresh();
@@ -934,13 +1030,14 @@ function startAutoRefresh(){
 }
 
 async function loadAllCache(){
-  const [payments,weeklies,kpis,loginLogs,accounts,schedules]=await Promise.all([
+  const [payments,weeklies,kpis,loginLogs,accounts,schedules,personalSchedules]=await Promise.all([
     sbGet('payments','order=created_at.desc'),
     sbGet('weeklies','order=created_at.desc'),
     sbGet('kpis','order=created_at.desc'),
     sbGet('login_logs','order=login_at.desc&limit=200'),
     sbGet('accounts','order=created.asc'),
     sbGet('schedules','order=start_date.asc'),
+    sbGet('personal_schedules','order=date.asc'),
   ]);
   CACHE.payments=payments.map(p=>({id:p.id,userId:p.user_id,area:p.area,fillDate:p.fill_date,date:p.date,note:p.note,paymentType:p.payment_type||'monthly',user:p.user,createdAt:p.created_at}));
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
@@ -948,6 +1045,7 @@ async function loadAllCache(){
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
   CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||''}));
   CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,endDate:s.end_date,note:s.note,createdAt:s.created_at}));
+  CACHE.personalSchedules=personalSchedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,date:s.date,title:s.title,leaveType:s.leave_type,note:s.note,createdAt:s.created_at}));
 }
 
 async function doLogout(){
@@ -973,6 +1071,7 @@ function showSection(id,el){
   if(id==='myhistory') renderMyHistory();
   if(id==='dashboard') refreshDash();
   if(id==='schedule'){ initScheduleForm(); renderScheduleCalendar(); }
+  if(id==='personal'){ renderPersonalCalendar(); }
   if(id==='changepwd'){
     const acc = CACHE.accounts.find(a=>a.id===currentUser.id);
     const hintEl = document.getElementById('pwd-hint');
@@ -1385,6 +1484,118 @@ function loadMailSetting(){
   const s=JSON.parse(localStorage.getItem('mailSetting')||'{}');
   const n=document.getElementById('manager-name');const e=document.getElementById('manager-email');
   if(n)n.value=s.name||'';if(e)e.value=s.email||'';
+}
+
+
+// ══════════════════════════════════════════
+//  個人行事曆
+// ══════════════════════════════════════════
+let psYear = new Date().getFullYear();
+let psMonth = new Date().getMonth();
+const PS_COLORS = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#17becf'];
+
+function changePersonalMonth(delta){
+  psMonth+=delta;
+  if(psMonth>11){psMonth=0;psYear++;}
+  if(psMonth<0){psMonth=11;psYear--;}
+  renderPersonalCalendar();
+}
+function openPersonalModal(date=''){
+  document.getElementById('ps-date').value=date||new Date().toISOString().split('T')[0];
+  document.getElementById('ps-time').value='';
+  document.getElementById('ps-title').value='';
+  document.getElementById('ps-leave').value='';
+  document.getElementById('ps-note').value='';
+  document.getElementById('modal-personal').classList.add('open');
+}
+async function savePersonalSchedule(){
+  const date=document.getElementById('ps-date').value;
+  const time=document.getElementById('ps-time').value;
+  const title=document.getElementById('ps-title').value.trim();
+  const leave=document.getElementById('ps-leave').value;
+  const note=document.getElementById('ps-note').value.trim();
+  if(!date||!title){showNotify('請填寫日期與行程標題','error');return;}
+  const displayTitle = time ? `${time} ${title}` : title;
+  const rec={id:pid(),user_id:currentUser.id,user_name:currentUser.name,date,title:displayTitle,leave_type:leave,note,created_at:nowStr()};
+  const ok=await sbInsert('personal_schedules',rec);
+  if(ok){
+    if(!CACHE.personalSchedules)CACHE.personalSchedules=[];
+    CACHE.personalSchedules.push({id:rec.id,userId:rec.user_id,userName:rec.user_name,date:rec.date,title:rec.title,leaveType:rec.leave_type,note:rec.note,createdAt:rec.created_at});
+    closeModal('modal-personal');renderPersonalCalendar();showNotify('行程已新增 ✓','success');
+  }else{showNotify('新增失敗，請重試','error');}
+}
+async function deletePersonalSchedule(id){
+  if(!confirm('確定要刪除此行程？'))return;
+  const ok=await sbDelete('personal_schedules',id);
+  if(ok){
+    CACHE.personalSchedules=CACHE.personalSchedules.filter(s=>s.id!==id);
+    renderPersonalCalendar();showNotify('已刪除','success');
+  }
+}
+function renderPersonalCalendar(){
+  document.getElementById('personal-month-label').textContent=`${psYear} 年 ${psMonth+1} 月`;
+  const grid=document.getElementById('personal-calendar-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  const firstDay=new Date(psYear,psMonth,1).getDay();
+  const daysInMonth=new Date(psYear,psMonth+1,0).getDate();
+  const today=new Date().toISOString().split('T')[0];
+  const monthStr=`${psYear}-${String(psMonth+1).padStart(2,'0')}`;
+  const myItems=(CACHE.personalSchedules||[]).filter(s=>s.userId===currentUser.id&&s.date.startsWith(monthStr));
+  for(let i=0;i<firstDay;i++){
+    const d=document.createElement('div');
+    d.style.cssText='min-height:100px;background:#f9f9f9;border-radius:4px;padding:4px';
+    grid.appendChild(d);
+  }
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=`${psYear}-${String(psMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dow=new Date(psYear,psMonth,day).getDay();
+    const isToday=dateStr===today;
+    const cell=document.createElement('div');
+    cell.style.cssText=`min-height:100px;background:${isToday?'#fffbea':dow===0||dow===6?'#f8f8f8':'#fff'};border-radius:6px;padding:6px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'};cursor:pointer`;
+    cell.onclick=()=>openPersonalModal(dateStr);
+    const dayLabel=document.createElement('div');
+    dayLabel.style.cssText=`font-size:14px;font-family:"Microsoft JhengHei",Arial,sans-serif;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:4px`;
+    dayLabel.textContent=day;
+    cell.appendChild(dayLabel);
+    myItems.filter(s=>s.date===dateStr).forEach((s,i)=>{
+      const tag=document.createElement('div');
+      tag.style.cssText=`font-size:12px;font-family:"Microsoft JhengHei",Arial,sans-serif;font-weight:600;padding:3px 6px;border-radius:3px;margin-bottom:2px;color:#fff;background:${PS_COLORS[i%PS_COLORS.length]};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-font-smoothing:antialiased`;
+      tag.title=`${s.title}${s.leaveType?'（'+s.leaveType+'）':''}${s.note?'：'+s.note:''}`;
+      tag.textContent=s.title+(s.leaveType?` ${s.leaveType}`:'');
+      cell.appendChild(tag);
+    });
+    grid.appendChild(cell);
+  }
+  const sorted=[...myItems].sort((a,b)=>a.date.localeCompare(b.date));
+  const tb=document.getElementById('personal-list-table');
+  if(tb) tb.innerHTML=sorted.length?sorted.map(s=>`<tr><td>${s.date}</td><td style="font-weight:600">${s.title}</td><td>${s.leaveType||'—'}</td><td>${s.note||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="deletePersonalSchedule('${s.id}')">刪除</button></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:24px">當月無個人行程</td></tr>';
+}
+
+// ── 今日工作提醒 ──
+async function showTodayReminder(){
+  const today=new Date().toISOString().split('T')[0];
+  const myPersonal=(CACHE.personalSchedules||[]).filter(s=>s.userId===currentUser.id&&s.date===today);
+  const myDept=(CACHE.schedules||[]).filter(s=>s.userId===currentUser.id&&s.startDate<=today&&s.endDate>=today);
+  const allItems=[
+    ...myPersonal.map(s=>({title:s.title,type:s.leaveType,note:s.note,src:'personal'})),
+    ...myDept.map(s=>({title:s.leaveType,type:s.leaveType,note:s.note,src:'dept'})),
+  ];
+  if(allItems.length===0)return;
+  const todayLabel=new Date().toLocaleDateString('zh-TW',{month:'long',day:'numeric',weekday:'long'});
+  document.getElementById('today-reminder-content').innerHTML=`
+    <div style="font-size:14px;color:var(--gray-600);margin-bottom:14px">📅 ${todayLabel} 的行程</div>
+    ${allItems.map(item=>`
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--gray-100);border-radius:var(--radius);margin-bottom:8px;border-left:4px solid ${item.src==='personal'?'var(--navy)':'#8B1A1A'}">
+        <div style="font-size:20px">${item.src==='personal'?'📌':'🗓️'}</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--navy)">${item.title}</div>
+          ${item.type&&item.type!==item.title?`<div style="font-size:12px;color:var(--gray-400);margin-top:2px">${item.type}</div>`:''}
+          ${item.note?`<div style="font-size:12px;color:var(--gray-600);margin-top:2px">${item.note}</div>`:''}
+          <div style="font-size:11px;color:var(--gray-400);margin-top:4px">${item.src==='personal'?'📆 個人行程':'🗓️ 部門排休'}</div>
+        </div>
+      </div>`).join('')}`;
+  document.getElementById('modal-today-reminder').classList.add('open');
 }
 
 // ══════════════════════════════════════════
