@@ -1670,9 +1670,13 @@ function renderPersonalCalendar(){
     cell.appendChild(dayLabel);
     myItems.filter(s=>s.date===dateStr).forEach((s,i)=>{
       const tag=document.createElement('div');
-      tag.style.cssText=`font-size:12px;font-family:"Microsoft JhengHei",Arial,sans-serif;font-weight:600;padding:3px 6px;border-radius:3px;margin-bottom:2px;color:#fff;background:${PS_COLORS[i%PS_COLORS.length]};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-font-smoothing:antialiased`;
-      tag.title=`${s.title}${s.leaveType?'（'+s.leaveType+'）':''}${s.note?'：'+s.note:''}`;
+      tag.style.cssText=`font-size:12px;font-family:"Microsoft JhengHei",Arial,sans-serif;font-weight:600;padding:3px 6px;border-radius:3px;margin-bottom:2px;color:#fff;background:${PS_COLORS[i%PS_COLORS.length]};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-font-smoothing:antialiased;cursor:pointer`;
+      tag.title=`點擊編輯：${s.title}${s.leaveType?'（'+s.leaveType+'）':''}${s.note?'：'+s.note:''}`;
       tag.textContent=s.title+(s.leaveType?` ${s.leaveType}`:'');
+      tag.onclick=(e)=>{
+        e.stopPropagation(); // 阻止觸發格子的新增
+        openEditPersonal(s.id);
+      };
       cell.appendChild(tag);
     });
     grid.appendChild(cell);
