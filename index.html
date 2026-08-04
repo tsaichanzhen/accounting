@@ -517,8 +517,8 @@
                 <select id="sch-type" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
                   <option>事假</option><option>特休</option><option>補休</option>
                   <option>婚假</option><option>產檢假</option><option>回診</option>
-                  <option>教育訓練</option><option>集團會議</option><option>國內出差</option>
-                  <option>電話接聽</option>
+                  <option>公假</option><option>教育訓練</option><option>集團會議</option>
+                  <option>國內出差</option><option>電話接聽</option>
                 </select>
               </div>
               <div class="form-group" style="margin-bottom:10px">
@@ -526,8 +526,16 @@
                 <input type="date" id="sch-start" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
               </div>
               <div class="form-group" style="margin-bottom:10px">
+                <label>開始時間（可選）</label>
+                <input type="time" id="sch-start-time" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
                 <label>結束日期</label>
                 <input type="date" id="sch-end" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label>結束時間（可選）</label>
+                <input type="time" id="sch-end-time" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
               </div>
               <div class="form-group" style="margin-bottom:14px">
                 <label>備註（可選）</label>
@@ -792,8 +800,18 @@
         <input type="date" id="edit-sch-start" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
       </div>
       <div class="form-group">
+        <label>開始時間（可選）</label>
+        <input type="time" id="edit-sch-start-time" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group">
         <label>結束日期</label>
         <input type="date" id="edit-sch-end" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+      <div class="form-group">
+        <label>結束時間（可選）</label>
+        <input type="time" id="edit-sch-end-time" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
       </div>
     </div>
     <div class="form-group" style="margin-bottom:12px">
@@ -801,6 +819,7 @@
       <input type="text" id="edit-sch-note" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
     </div>
     <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteScheduleFromEdit()">刪除</button>
       <button class="btn btn-outline" onclick="closeModal('modal-edit-schedule')">取消</button>
       <button class="btn btn-primary" onclick="updateSchedule()">儲存修改</button>
     </div>
@@ -1121,7 +1140,7 @@ async function loadAllCache(){
   CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
   CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||''}));
-  CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,endDate:s.end_date,note:s.note,createdAt:s.created_at}));
+  CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,startTime:s.start_time||null,endDate:s.end_date,endTime:s.end_time||null,note:s.note,createdAt:s.created_at}));
   CACHE.personalSchedules=personalSchedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,date:s.date,title:s.title,leaveType:s.leave_type,note:s.note,createdAt:s.created_at}));
 }
 
@@ -1830,9 +1849,11 @@ function renderScheduleCalendar(){
     dayItems.forEach(s=>{
       const tag = document.createElement('div');
       const color = getSchColor(s);
-      tag.style.cssText = `font-size:13px;font-family:"Microsoft JhengHei","PingFang TC",Arial,sans-serif;font-weight:700;padding:3px 7px;border-radius:3px;margin-bottom:2px;color:#fff;background:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;letter-spacing:0.3px`;
-      tag.title = `${s.userName}：${s.leaveType}${s.note?'（'+s.note+'）':''}`;
-      tag.textContent = `${s.userName} ${s.leaveType}`;
+      tag.style.cssText = `font-size:13px;font-family:"Microsoft JhengHei","PingFang TC",Arial,sans-serif;font-weight:700;padding:3px 7px;border-radius:3px;margin-bottom:2px;color:#fff;background:${color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;letter-spacing:0.3px`;
+      tag.title = `點擊編輯：${s.userName}｜${s.leaveType}${s.note?'（'+s.note+'）':''}`;
+      const timeLabel = s.startTime ? `${s.startTime} ` : '';
+      tag.textContent = `${timeLabel}${s.userName} ${s.leaveType}`;
+      tag.onclick = (e) => { e.stopPropagation(); openEditSchedule(s.id); };
       cell.appendChild(tag);
     });
 
@@ -1890,7 +1911,9 @@ function openEditSchedule(id){
   document.getElementById('edit-sch-id').value = id;
   document.getElementById('edit-sch-type').value = s.leaveType;
   document.getElementById('edit-sch-start').value = s.startDate;
+  document.getElementById('edit-sch-start-time').value = s.startTime||'';
   document.getElementById('edit-sch-end').value = s.endDate;
+  document.getElementById('edit-sch-end-time').value = s.endTime||'';
   document.getElementById('edit-sch-note').value = s.note||'';
   document.getElementById('modal-edit-schedule').classList.add('open');
 }
@@ -1899,14 +1922,16 @@ async function updateSchedule(){
   const id = document.getElementById('edit-sch-id').value;
   const leaveType = document.getElementById('edit-sch-type').value;
   const startDate = document.getElementById('edit-sch-start').value;
+  const startTime = document.getElementById('edit-sch-start-time').value;
   const endDate = document.getElementById('edit-sch-end').value;
+  const endTime = document.getElementById('edit-sch-end-time').value;
   const note = document.getElementById('edit-sch-note').value.trim();
   if(!startDate||!endDate){showNotify('請選擇日期','error');return;}
   if(endDate<startDate){showNotify('結束日期不能早於開始日期','error');return;}
-  const ok = await sbUpdate('schedules', id, {leave_type:leaveType, start_date:startDate, end_date:endDate, note});
+  const ok = await sbUpdate('schedules', id, {leave_type:leaveType, start_date:startDate, start_time:startTime||null, end_date:endDate, end_time:endTime||null, note});
   if(ok){
     const s = CACHE.schedules.find(s=>s.id===id);
-    if(s){s.leaveType=leaveType;s.startDate=startDate;s.endDate=endDate;s.note=note;}
+    if(s){s.leaveType=leaveType;s.startDate=startDate;s.startTime=startTime||null;s.endDate=endDate;s.endTime=endTime||null;s.note=note;}
     closeModal('modal-edit-schedule');
     renderScheduleCalendar();
     showNotify('排休已更新 ✓','success');
@@ -1918,16 +1943,20 @@ async function saveSchedule(){
   const acc = CACHE.accounts.find(a=>a.id===userId);
   const leaveType = document.getElementById('sch-type').value;
   const startDate = document.getElementById('sch-start').value;
+  const startTime = document.getElementById('sch-start-time').value;
   const endDate = document.getElementById('sch-end').value;
+  const endTime = document.getElementById('sch-end-time').value;
   const note = document.getElementById('sch-note').value.trim();
   if(!startDate||!endDate){showNotify('請選擇日期','error');return;}
   if(endDate<startDate){showNotify('結束日期不能早於開始日期','error');return;}
-  const rec = {id:pid(), user_id:userId, user_name:acc?acc.name:'', type_group:'假別', leave_type:leaveType, start_date:startDate, end_date:endDate, note, created_at:nowStr()};
+  const rec = {id:pid(), user_id:userId, user_name:acc?acc.name:'', type_group:'假別', leave_type:leaveType, start_date:startDate, start_time:startTime||null, end_date:endDate, end_time:endTime||null, note, created_at:nowStr()};
   const ok = await sbInsert('schedules', rec);
   if(ok){
     if(!CACHE.schedules) CACHE.schedules=[];
-    CACHE.schedules.push({id:rec.id,userId:rec.user_id,userName:rec.user_name,typeGroup:'假別',leaveType:rec.leave_type,startDate:rec.start_date,endDate:rec.end_date,note:rec.note,createdAt:rec.created_at});
+    CACHE.schedules.push({id:rec.id,userId:rec.user_id,userName:rec.user_name,typeGroup:'假別',leaveType:rec.leave_type,startDate:rec.start_date,startTime:rec.start_time,endDate:rec.end_date,endTime:rec.end_time,note:rec.note,createdAt:rec.created_at});
     document.getElementById('sch-note').value='';
+    document.getElementById('sch-start-time').value='';
+    document.getElementById('sch-end-time').value='';
     renderScheduleCalendar();
     showNotify('排休已新增 ✓','success');
   } else { showNotify('新增失敗，請重試','error'); }
@@ -1938,6 +1967,18 @@ async function deleteSchedule(id){
   const ok = await sbDelete('schedules', id);
   if(ok){
     CACHE.schedules = CACHE.schedules.filter(s=>s.id!==id);
+    renderScheduleCalendar();
+    showNotify('已刪除','success');
+  }
+}
+
+async function deleteScheduleFromEdit(){
+  const id = document.getElementById('edit-sch-id').value;
+  if(!confirm('確定要刪除此排休紀錄？'))return;
+  const ok = await sbDelete('schedules', id);
+  if(ok){
+    CACHE.schedules = CACHE.schedules.filter(s=>s.id!==id);
+    closeModal('modal-edit-schedule');
     renderScheduleCalendar();
     showNotify('已刪除','success');
   }
