@@ -1853,7 +1853,12 @@ function renderScheduleCalendar(){
       tag.title = `點擊編輯：${s.userName}｜${s.leaveType}${s.note?'（'+s.note+'）':''}`;
       const timeLabel = s.startTime ? `${s.startTime} ` : '';
       tag.textContent = `${timeLabel}${s.userName} ${s.leaveType}`;
-      tag.onclick = (e) => { e.stopPropagation(); openEditSchedule(s.id); };
+      tag.onclick = (e) => {
+        e.stopPropagation();
+        const canEdit = currentUser.role==='admin' || s.userId===currentUser.id;
+        if(!canEdit){ showNotify('僅本人或管理員可以修改此紀錄','error'); return; }
+        openEditSchedule(s.id);
+      };
       cell.appendChild(tag);
     });
 
@@ -1890,24 +1895,31 @@ function renderSchList(){
   const items = (CACHE.schedules||[]).filter(s=>s.startDate<=monthStr+'-31' && s.endDate>=monthStr+'-01')
     .sort((a,b)=>a.startDate.localeCompare(b.startDate));
   const tb = document.getElementById('sch-list-table');
-  tb.innerHTML = items.length ? items.map(s=>`
-    <tr>
+  tb.innerHTML = items.length ? items.map(s=>{
+    const canEdit = currentUser.role==='admin' || s.userId===currentUser.id;
+    const editBtn = canEdit
+      ? `<button class="btn btn-sm btn-outline" onclick="openEditSchedule('${s.id}')">編輯</button>`
+      : `<button class="btn btn-sm btn-outline" style="opacity:0.3;cursor:not-allowed" title="僅本人可修改" disabled>編輯</button>`;
+    const delBtn = canEdit
+      ? `<button class="btn btn-sm btn-danger" onclick="deleteSchedule('${s.id}')">刪除</button>`
+      : `<button class="btn btn-sm btn-danger" style="opacity:0.3;cursor:not-allowed" title="僅本人可刪除" disabled>刪除</button>`;
+    return `<tr>
       <td>${s.userName}</td>
       <td>${s.leaveType}</td>
-      <td>${s.startDate}</td>
-      <td>${s.endDate}</td>
+      <td>${s.startDate}${s.startTime?' '+s.startTime:''}</td>
+      <td>${s.endDate}${s.endTime?' '+s.endTime:''}</td>
       <td>${s.note||'—'}</td>
-      <td style="display:flex;gap:6px">
-        <button class="btn btn-sm btn-outline" onclick="openEditSchedule('${s.id}')">編輯</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteSchedule('${s.id}')">刪除</button>
-      </td>
-    </tr>`).join('')
+      <td style="display:flex;gap:6px">${editBtn}${delBtn}</td>
+    </tr>`;
+  }).join('')
     : '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:24px">當月無排休紀錄</td></tr>';
 }
 
 function openEditSchedule(id){
   const s = (CACHE.schedules||[]).find(s=>s.id===id);
   if(!s) return;
+  const canEdit = currentUser.role==='admin' || s.userId===currentUser.id;
+  if(!canEdit){ showNotify('僅本人或管理員可以修改此紀錄','error'); return; }
   document.getElementById('edit-sch-id').value = id;
   document.getElementById('edit-sch-type').value = s.leaveType;
   document.getElementById('edit-sch-start').value = s.startDate;
