@@ -500,85 +500,44 @@
       <!-- 排休月曆 -->
       <div class="section" id="sec-schedule">
         <div class="page-header">
-          <div><div class="page-title">部門排休月曆</div><div class="page-subtitle">查看及管理部門成員的假別與公務活動</div></div>
+          <div><div class="page-title">部門排休月曆</div><div class="page-subtitle">點擊日期格子即可新增排休，點擊排休標籤可編輯</div></div>
           <button class="btn btn-gold btn-sm" onclick="exportSchedulePDF()">⬇ 匯出圖檔</button>
         </div>
-        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
-          <!-- 左側新增表單 -->
-          <div style="width:240px;flex-shrink:0">
-            <div class="card" style="padding:18px">
-              <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px">👤 新增排休</div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label>選擇成員</label>
-                <select id="sch-user" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label>假　別</label>
-                <select id="sch-type" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
-                  <option>事假</option><option>特休</option><option>補休</option>
-                  <option>婚假</option><option>產檢假</option><option>回診</option>
-                  <option>公假</option><option>教育訓練</option><option>集團會議</option>
-                  <option>國內出差</option><option>電話接聽</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label>開始日期</label>
-                <input type="date" id="sch-start" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label>開始時間（可選）</label>
-                <input type="time" id="sch-start-time" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label>結束日期</label>
-                <input type="date" id="sch-end" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label>結束時間（可選）</label>
-                <input type="time" id="sch-end-time" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
-              </div>
-              <div class="form-group" style="margin-bottom:14px">
-                <label>備註（可選）</label>
-                <input type="text" id="sch-note" placeholder="例：蜜月旅行" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
-              </div>
-              <button class="btn btn-primary" style="width:100%" onclick="saveSchedule()">＋ 新增</button>
-            </div>
-            <div class="card" style="padding:18px;margin-top:0">
-              <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">🎨 顏色配置</div>
-              <div style="display:flex;gap:8px">
-                <button id="color-by-user" onclick="setColorMode('user')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--gray-200);background:#fff;color:var(--gray-400)">依人員</button>
-                <button id="color-by-type" onclick="setColorMode('type')" style="flex:1;padding:7px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--navy);background:var(--navy);color:#fff">依假別</button>
-              </div>
-              <div id="sch-legend" style="margin-top:12px;font-size:11px"></div>
-            </div>
+
+        <!-- 顏色配置（移至最上層） -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:12px 18px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow)">
+          <span style="font-size:13px;font-weight:700;color:var(--navy)">🎨 顏色配置</span>
+          <div style="display:flex;gap:8px">
+            <button id="color-by-user" onclick="setColorMode('user')" style="padding:6px 18px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--gray-200);background:#fff;color:var(--gray-400)">依人員</button>
+            <button id="color-by-type" onclick="setColorMode('type')" style="padding:6px 18px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--navy);background:var(--navy);color:#fff">依假別</button>
           </div>
-          <!-- 右側月曆 -->
-          <div style="flex:1;min-width:0">
-            <div class="card" style="padding:20px" id="schedule-calendar-card">
-              <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px">
-                <button onclick="changeSchMonth(-1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">‹</button>
-                <div style="font-size:16px;font-weight:700;color:var(--navy);min-width:130px;text-align:center" id="sch-month-label"></div>
-                <button onclick="changeSchMonth(1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">›</button>
-              </div>
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
-                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:#e53e3e">日</div>
-                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">一</div>
-                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">二</div>
-                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">三</div>
-                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">四</div>
-                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">五</div>
-                <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,&quot;PingFang TC&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:#3182ce">六</div>
-              </div>
-              <div id="sch-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
-            </div>
-            <div class="card" style="margin-top:0">
-              <div class="card-title">📋 當月排休列表</div>
-              <div class="table-wrap"><table>
-                <thead><tr><th>成員</th><th>假別/類型</th><th>開始</th><th>結束</th><th>備註</th><th>操作</th></tr></thead>
-                <tbody id="sch-list-table"></tbody>
-              </table></div>
-            </div>
+          <div id="sch-legend" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-left:8px"></div>
+        </div>
+
+        <!-- 月曆（全寬） -->
+        <div class="card" style="padding:20px" id="schedule-calendar-card">
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px">
+            <button onclick="changeSchMonth(-1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">‹</button>
+            <div style="font-size:16px;font-weight:700;color:var(--navy);min-width:130px;text-align:center" id="sch-month-label"></div>
+            <button onclick="changeSchMonth(1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">›</button>
           </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
+            <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:#e53e3e">日</div>
+            <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">一</div>
+            <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">二</div>
+            <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">三</div>
+            <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">四</div>
+            <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">五</div>
+            <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:#3182ce">六</div>
+          </div>
+          <div id="sch-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+        </div>
+        <div class="card" style="margin-top:0">
+          <div class="card-title">📋 當月排休列表</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>成員</th><th>假別/類型</th><th>開始</th><th>結束</th><th>備註</th><th>操作</th></tr></thead>
+            <tbody id="sch-list-table"></tbody>
+          </table></div>
         </div>
       </div>
 
@@ -776,6 +735,56 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-kpi')">取消</button>
       <button class="btn btn-primary" onclick="saveKPI()">儲存 KPI</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 新增排休 -->
+<div class="modal-overlay" id="modal-add-schedule">
+  <div class="modal" style="width:500px">
+    <div class="modal-title">🗓️ 新增排休</div>
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>選擇成員</label>
+        <select id="sch-user" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit"></select>
+      </div>
+      <div class="form-group">
+        <label>假別</label>
+        <select id="sch-type" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+          <option>事假</option><option>特休</option><option>補休</option>
+          <option>婚假</option><option>產檢假</option><option>回診</option>
+          <option>公假</option><option>教育訓練</option><option>集團會議</option>
+          <option>國內出差</option><option>電話接聽</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>開始日期</label>
+        <input type="date" id="sch-start" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+      <div class="form-group">
+        <label>開始時間（可選）</label>
+        <input type="time" id="sch-start-time" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group">
+        <label>結束日期</label>
+        <input type="date" id="sch-end" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+      <div class="form-group">
+        <label>結束時間（可選）</label>
+        <input type="time" id="sch-end-time" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>備註（可選）</label>
+      <input type="text" id="sch-note" placeholder="例：蜜月旅行" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-schedule')">取消</button>
+      <button class="btn btn-primary" onclick="saveSchedule()">新增</button>
     </div>
   </div>
 </div>
@@ -1770,13 +1779,22 @@ let schColorMode = 'type'; // 預設依假別
 function updateLeaveTypes(){ /* 已合併，不需動態更新 */ }
 
 function initScheduleForm(){
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('sch-start').value = today;
-  document.getElementById('sch-end').value = today;
+  renderScheduleCalendar();
+}
+
+function openAddScheduleModal(date=''){
+  const today = date || new Date().toISOString().split('T')[0];
   const sel = document.getElementById('sch-user');
   sel.innerHTML = CACHE.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
   const mine = CACHE.accounts.find(a=>a.id===currentUser.id);
   if(mine) sel.value = mine.id;
+  document.getElementById('sch-type').value = '事假';
+  document.getElementById('sch-start').value = today;
+  document.getElementById('sch-start-time').value = '';
+  document.getElementById('sch-end').value = today;
+  document.getElementById('sch-end-time').value = '';
+  document.getElementById('sch-note').value = '';
+  document.getElementById('modal-add-schedule').classList.add('open');
 }
 
 function setColorMode(mode){
@@ -1837,7 +1855,8 @@ function renderScheduleCalendar(){
     const isWeekend = dow===0||dow===6;
 
     const cell = document.createElement('div');
-    cell.style.cssText = `min-height:100px;background:${isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff'};border-radius:6px;padding:6px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'}`;
+    cell.style.cssText = `min-height:100px;background:${isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff'};border-radius:6px;padding:6px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'};cursor:pointer`;
+    cell.onclick = () => openAddScheduleModal(dateStr);
 
     const dayLabel = document.createElement('div');
     dayLabel.style.cssText = `font-size:14px;font-family:"Microsoft JhengHei","PingFang TC",Arial,sans-serif;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:4px`;
@@ -1887,7 +1906,7 @@ function renderSchLegend(){
     const types = [...new Set(monthItems.map(s=>s.leaveType))];
     items = types.map(t=>({label:t, color:TYPE_COLORS_MAP[t]||'#aaa'}));
   }
-  legend.innerHTML = items.map(i=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:12px;height:12px;border-radius:3px;background:${i.color};flex-shrink:0"></div><span style="color:var(--gray-600)">${i.label}</span></div>`).join('');
+  legend.innerHTML = items.map(i=>`<div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:12px;border-radius:3px;background:${i.color};flex-shrink:0"></div><span style="color:var(--gray-600);font-size:12px">${i.label}</span></div>`).join('');
 }
 
 function renderSchList(){
@@ -1966,9 +1985,7 @@ async function saveSchedule(){
   if(ok){
     if(!CACHE.schedules) CACHE.schedules=[];
     CACHE.schedules.push({id:rec.id,userId:rec.user_id,userName:rec.user_name,typeGroup:'假別',leaveType:rec.leave_type,startDate:rec.start_date,startTime:rec.start_time,endDate:rec.end_date,endTime:rec.end_time,note:rec.note,createdAt:rec.created_at});
-    document.getElementById('sch-note').value='';
-    document.getElementById('sch-start-time').value='';
-    document.getElementById('sch-end-time').value='';
+    closeModal('modal-add-schedule');
     renderScheduleCalendar();
     showNotify('排休已新增 ✓','success');
   } else { showNotify('新增失敗，請重試','error'); }
