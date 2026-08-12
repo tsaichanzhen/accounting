@@ -1539,6 +1539,7 @@ function removeAreaRow(id){
 }
 
 function openPaymentModal(){
+  if(!requireEditPerm('payment')) return;
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('pm-fill-date').value = today;
   document.getElementById('pm-area-list').innerHTML = '';
@@ -1622,6 +1623,7 @@ function updateWeekDateRange(){
   document.getElementById('wr-daterange').value=`${fmt(mon)}-${fmt(fri)}`;
 }
 function openWeeklyModal(){
+  if(!requireEditPerm('weekly')) return;
   document.getElementById('wr-week').value=getISOWeek(new Date());
   updateWeekDateRange();
   WR_KEYS.forEach(k=>{const el=document.getElementById(k);if(el)el.value='';});
@@ -1677,6 +1679,7 @@ function calcKPITotal(){
   document.getElementById('kpi-total-display').textContent=total;
 }
 function openKPIModal(){
+  if(!requireEditPerm('kpi')) return;
   const n=new Date();
   document.getElementById('kpi-month').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
   document.getElementById('kpi-quality').value=40;document.getElementById('kpi-ontime').value=30;
@@ -1888,6 +1891,13 @@ function permLevel(section){
 }
 function canView(section){ return permLevel(section)!=='none'; }
 function canEdit(section){ return permLevel(section)==='edit'; }
+function requireEditPerm(section){
+  if(!canEdit(section)){
+    showNotify('無編輯權限，請洽管理員','error');
+    return false;
+  }
+  return true;
+}
 
 const READONLY_OBSERVERS={};
 const LOCKED_SECTIONS=new Set();
@@ -2168,6 +2178,7 @@ function initScheduleForm(){
 }
 
 function openAddScheduleModal(date=''){
+  if(!requireEditPerm('schedule')) return;
   const today = date || new Date().toISOString().split('T')[0];
   const sel = document.getElementById('sch-user');
   sel.innerHTML = CACHE.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
@@ -2320,6 +2331,7 @@ function renderSchList(){
 }
 
 function openEditSchedule(id){
+  if(!requireEditPerm('schedule')) return;
   const s = (CACHE.schedules||[]).find(s=>s.id===id);
   if(!s) return;
   const canEdit = currentUser.role==='admin' || s.userId===currentUser.id;
@@ -2629,6 +2641,7 @@ function pcWeekday(dateStr){
 }
 
 function openPettyCashModal(editId){
+  if(!requireEditPerm('pettycash')) return;
   document.getElementById('pc-edit-id').value='';
   document.getElementById('pc-modal-title').textContent='💰 新增每日零用金紀錄';
   if(editId){
@@ -2700,6 +2713,7 @@ async function savePettyCash(){
 }
 
 function openPettyCashCount(recordId){
+  if(!requireEditPerm('pettycash')) return;
   const r=CACHE.pettyCashRecords.find(x=>x.id===recordId);
   if(!r) return;
   document.getElementById('pcc-record-id').value=recordId;
@@ -2987,6 +3001,7 @@ async function cfSaveMonthField(dbField,rawValue,isNumber){
 }
 
 function openCFGenerateModal(){
+  if(!requireEditPerm('cashforecast')) return;
   if(!currentCFMonthId){showNotify('請先新增/選擇月份','error');return;}
   if(cfPeriodsForMonth(currentCFMonthId).length>0){showNotify('此月份已有期別，請改用「新增單一期別」','error');return;}
   const today=new Date();
@@ -3036,6 +3051,7 @@ async function generateCFTemplate(){
 }
 
 function openCFMonthModal(editMode){
+  if(!requireEditPerm('cashforecast')) return;
   const ids=['cfm-label','cfm-prepared-date','cfm-prev-base','cfm-prev-ratio','cfm-prev-note','cfm-curr-base','cfm-curr-ratio','cfm-curr-note','cfm-big-expense','cfm-chairman'];
   document.getElementById('cfm-edit-id').value='';
   document.getElementById('cf-month-modal-title').textContent='💹 新增預估月份';
@@ -3094,6 +3110,7 @@ async function saveCFMonth(){
 }
 
 function openCFPeriodModal(){
+  if(!requireEditPerm('cashforecast')) return;
   if(!currentCFMonthId){showNotify('請先新增/選擇月份','error');return;}
   ['cfp-label','cfp-date','cfp-ar-ratio'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cfp-is-total').checked=false;
