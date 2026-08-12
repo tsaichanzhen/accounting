@@ -360,7 +360,7 @@
 
       <!-- USERS (Admin) -->
       <div class="section admin-only" id="sec-users">
-        <div class="page-header">
+        <div class="page-header" style="flex-direction:column;align-items:flex-start;gap:12px">
           <div><div class="page-title">帳號管理</div><div class="page-subtitle">管理財會部人員登入帳號</div></div>
           <div style="display:flex;gap:10px">
             <button class="btn btn-outline" onclick="openResetPwdModal()">🔐 重設密碼</button>
@@ -370,7 +370,7 @@
         <div class="card">
           <div class="card-title">👥 人員帳號列表</div>
           <div class="table-wrap"><table>
-            <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th>權限</th><th>建立時間</th><th>操作</th></tr></thead>
+            <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th style="min-width:200px">權限</th><th>建立時間</th><th>操作</th></tr></thead>
             <tbody id="user-table"></tbody>
           </table></div>
         </div>
@@ -1849,7 +1849,7 @@ function renderUserTable(){
       PERMISSION_SECTIONS.forEach(s=>{ const lvl=pm[s.key]||'edit'; counts[lvl]++; });
       permLabel = counts.none>0 ? `${counts.edit}可編輯／${counts.view}僅瀏覽／${counts.none}無權限` : (counts.view>0?`${counts.edit}可編輯／${counts.view}僅瀏覽`:'全部可編輯');
     }
-    return `<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td style="font-size:12px">${permLabel}</td><td>${a.created}</td><td>
+    return `<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td style="font-size:12px;white-space:nowrap">${permLabel}</td><td>${a.created}</td><td>
       <button class="btn btn-sm btn-outline" onclick="toggleUserActive('${a.id}',${!a.active})">${a.active?'停用':'啟用'}</button>
       ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditPermModal('${a.id}')">權限</button>`:''}
     </td></tr>`;
