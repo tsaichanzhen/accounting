@@ -1552,6 +1552,7 @@ function openPaymentModal(){
 }
 
 async function savePayment(){
+  if(!requireEditPerm('payment')) return;
   const fillDate = document.getElementById('pm-fill-date').value;
   if(!fillDate){showNotify('請選擇填寫日期','error');return;}
   const rows = [];
@@ -1630,6 +1631,7 @@ function openWeeklyModal(){
   document.getElementById('modal-weekly').classList.add('open');
 }
 async function saveWeekly(){
+  if(!requireEditPerm('weekly')) return;
   const week=document.getElementById('wr-week').value;
   if(!week){showNotify('請選擇週次','error');return;}
   const items={};
@@ -1690,6 +1692,7 @@ function openKPIModal(){
   document.getElementById('modal-kpi').classList.add('open');
 }
 async function saveKPI(){
+  if(!requireEditPerm('kpi')) return;
   const month=document.getElementById('kpi-month').value;
   if(!month){showNotify('請選擇月份','error');return;}
   const quality=parseInt(document.getElementById('kpi-quality').value)||0;
@@ -1926,8 +1929,7 @@ function applyReadOnlyLock(id){
     if(!el.disabled) el.disabled=true;
   });
   container.querySelectorAll('button').forEach(btn=>{
-    if(btn.classList.contains('btn-view-safe')) return;
-    if(btn.closest('.filter-bar')) return;
+    if(btn.classList.contains('btn-view-safe')) return; // 僅有明確標記為安全的按鈕（清除篩選/匯出）才放行
     if(!btn.disabled) btn.disabled=true;
   });
 }
@@ -2367,6 +2369,7 @@ async function updateSchedule(){
 }
 
 async function saveSchedule(){
+  if(!requireEditPerm('schedule')) return;
   const userId = document.getElementById('sch-user').value;
   const acc = CACHE.accounts.find(a=>a.id===userId);
   const leaveType = document.getElementById('sch-type').value;
@@ -2389,6 +2392,7 @@ async function saveSchedule(){
 }
 
 async function deleteSchedule(id){
+  if(!requireEditPerm('schedule')) return;
   if(!confirm('確定要刪除此排休紀錄？'))return;
   const ok = await sbDelete('schedules', id);
   if(ok){
@@ -2399,6 +2403,7 @@ async function deleteSchedule(id){
 }
 
 async function deleteScheduleFromEdit(){
+  if(!requireEditPerm('schedule')) return;
   const id = document.getElementById('edit-sch-id').value;
   if(!confirm('確定要刪除此排休紀錄？'))return;
   const ok = await sbDelete('schedules', id);
@@ -2682,6 +2687,7 @@ function pcUpdatePreview(){
 }
 
 async function savePettyCash(){
+  if(!requireEditPerm('pettycash')) return;
   const id=document.getElementById('pc-edit-id').value;
   const recordDate=document.getElementById('pc-date').value;
   if(!recordDate){showNotify('請選擇日期','error');return;}
@@ -2749,6 +2755,7 @@ function pccUpdatePreview(){
   diffEl.style.color=diff===0?'var(--green)':'var(--red)';
 }
 async function savePettyCashCount(){
+  if(!requireEditPerm('pettycash')) return;
   const recordId=document.getElementById('pcc-record-id').value;
   const countDate=document.getElementById('pcc-date').value;
   const r=CACHE.pettyCashRecords.find(x=>x.id===recordId);
@@ -2976,6 +2983,7 @@ function renderCFPeriodManageList(){
   ).join('') || '<span style="color:var(--gray-400);font-size:13px">尚無期別</span>';
 }
 async function cfRenamePeriod(periodId,newLabel){
+  if(!requireEditPerm('cashforecast')) return;
   newLabel=newLabel.trim();
   if(!newLabel){showNotify('名稱不可為空','error');renderCFGrid(currentCFMonthId);return;}
   const ok=await sbUpdate('cash_forecast_periods',periodId,{label:newLabel});
@@ -2987,6 +2995,7 @@ async function cfRenamePeriod(periodId,newLabel){
 
 const CF_MONTH_FIELD_MAP={prev_month_ar_base:'prevBase',prev_month_ratio:'prevRatio',prev_month_ar_note:'prevNote',curr_month_ar_base:'currBase',curr_month_ratio:'currRatio',curr_month_ar_note:'currNote',big_expense_note:'bigExpenseNote',chairman_repayment_note:'chairmanNote'};
 async function cfSaveMonthField(dbField,rawValue,isNumber){
+  if(!requireEditPerm('cashforecast')) return;
   const month=CACHE.cfMonths.find(m=>m.id===currentCFMonthId);
   if(!month) return;
   const value = isNumber ? (rawValue===''?null:Number(rawValue)) : (rawValue.trim()||null);
@@ -3009,6 +3018,7 @@ function openCFGenerateModal(){
   document.getElementById('modal-cf-generate').classList.add('open');
 }
 async function generateCFTemplate(){
+  if(!requireEditPerm('cashforecast')) return;
   const ym=document.getElementById('cfg-yearmonth').value;
   if(!ym){showNotify('請選擇年月','error');return;}
   if(cfPeriodsForMonth(currentCFMonthId).length>0){showNotify('此月份已有期別，無法重複產生','error');closeModal('modal-cf-generate');return;}
@@ -3076,6 +3086,7 @@ function openCFMonthModal(editMode){
   document.getElementById('modal-cf-month').classList.add('open');
 }
 async function saveCFMonth(){
+  if(!requireEditPerm('cashforecast')) return;
   const id=document.getElementById('cfm-edit-id').value;
   const label=document.getElementById('cfm-label').value.trim();
   if(!label){showNotify('請輸入月份標籤','error');return;}
@@ -3117,6 +3128,7 @@ function openCFPeriodModal(){
   document.getElementById('modal-cf-period').classList.add('open');
 }
 async function saveCFPeriod(){
+  if(!requireEditPerm('cashforecast')) return;
   const label=document.getElementById('cfp-label').value.trim();
   if(!label){showNotify('請輸入期別標籤','error');return;}
   const periods=cfPeriodsForMonth(currentCFMonthId);
@@ -3137,6 +3149,7 @@ async function saveCFPeriod(){
   }else{showNotify('新增失敗','error');}
 }
 async function deleteCFPeriod(periodId){
+  if(!requireEditPerm('cashforecast')) return;
   if(!confirm('確定要刪除此期別？（該期別所有金額資料將一併刪除）'))return;
   const ok=await sbDelete('cash_forecast_periods',periodId);
   if(ok){
@@ -3300,6 +3313,7 @@ async function cfRecomputeARAmounts(monthId){
   }
 }
 async function cfSaveRatio(periodId,value){
+  if(!requireEditPerm('cashforecast')) return;
   const ratio = value===''?null:Number(value);
   const result=await sbUpdateDebug('cash_forecast_periods',periodId,{ar_ratio:ratio});
   if(!result.ok){
@@ -3315,6 +3329,7 @@ async function cfSaveRatio(periodId,value){
 // 依原始 Excel 檔案的固定比例，套用到目前月份的期別（依「一鍵產生」樣板順序：第3/5/7/9/11個非合計期別）
 const CF_DEFAULT_RATIO_BY_POSITION={2:0.3,4:0.2,6:0.2,8:0.15,10:0.15}; // 0-based index
 async function cfApplyDefaultARRatios(){
+  if(!requireEditPerm('cashforecast')) return;
   if(!currentCFMonthId) return;
   const normalPeriods=cfPeriodsForMonth(currentCFMonthId).filter(p=>!p.isTotal);
   if(!normalPeriods.length){showNotify('此月份尚無期別','error');return;}
@@ -3340,11 +3355,13 @@ async function cfApplyDefaultARRatios(){
   }
 }
 async function cfSaveValue(inputEl,periodId,categoryId){
+  if(!requireEditPerm('cashforecast')) return;
   const amount=Number(inputEl.value||0);
   const ok=await cfUpsertValue(periodId,categoryId,amount);
   if(ok){ renderCFGrid(currentCFMonthId); } else { showNotify('儲存失敗','error'); }
 }
 async function cfSaveBankValue(inputEl,periodId,accountName){
+  if(!requireEditPerm('cashforecast')) return;
   const amount=Number(inputEl.value||0);
   const existing=CACHE.cfBankBalance.find(v=>v.periodId===periodId&&v.accountName===accountName);
   let ok;
@@ -3360,7 +3377,10 @@ async function cfSaveBankValue(inputEl,periodId,accountName){
 }
 
 const TABLE_CACHE_KEY={login_logs:'loginLogs',petty_cash_records:'pettyCashRecords',petty_cash_counts:'pettyCashCounts',cash_forecast_months:'cfMonths',cash_forecast_periods:'cfPeriods',cash_forecast_values:'cfValues',cash_forecast_bank_balance:'cfBankBalance'};
+const TABLE_TO_SECTION={payments:'payment',weeklies:'weekly',kpis:'kpi',schedules:'schedule',petty_cash_records:'pettycash',petty_cash_counts:'pettycash',cash_forecast_months:'cashforecast',cash_forecast_periods:'cashforecast',cash_forecast_values:'cashforecast',cash_forecast_bank_balance:'cashforecast'};
 async function deleteRecord(table,id,cb){
+  const section=TABLE_TO_SECTION[table];
+  if(section && !requireEditPerm(section)) return;
   if(!confirm('確定要刪除此筆紀錄？'))return;
   const ok=await sbDelete(table,id);
   if(ok){
