@@ -211,13 +211,13 @@
       <div class="sidebar-section">
         <span class="sidebar-label">主選單</span>
         <div class="nav-item active" onclick="showSection('dashboard',this)"><span class="icon">📊</span>首頁總覽</div>
-        <div class="nav-item" onclick="showSection('payment',this)"><span class="icon">📄</span>繳單進度</div>
-        <div class="nav-item" onclick="showSection('weekly',this)"><span class="icon">📋</span>週報填寫</div>
-        <div class="nav-item" onclick="showSection('kpi',this)"><span class="icon">🎯</span>月度 KPI</div>
-        <div class="nav-item" onclick="showSection('schedule',this)"><span class="icon">🗓️</span>排休月曆</div>
+        <div class="nav-item" id="nav-payment" onclick="showSection('payment',this)"><span class="icon">📄</span>繳單進度</div>
+        <div class="nav-item" id="nav-weekly" onclick="showSection('weekly',this)"><span class="icon">📋</span>週報填寫</div>
+        <div class="nav-item" id="nav-kpi" onclick="showSection('kpi',this)"><span class="icon">🎯</span>月度 KPI</div>
+        <div class="nav-item" id="nav-schedule" onclick="showSection('schedule',this)"><span class="icon">🗓️</span>排休月曆</div>
         <div class="nav-item" onclick="showSection('personal',this)"><span class="icon">📆</span>個人行事曆</div>
-        <div class="nav-item" onclick="showSection('pettycash',this)"><span class="icon">💰</span>零用金紀錄</div>
-        <div class="nav-item" onclick="showSection('cashforecast',this)"><span class="icon">💹</span>資金預估表</div>
+        <div class="nav-item" id="nav-pettycash" onclick="showSection('pettycash',this)"><span class="icon">💰</span>零用金紀錄</div>
+        <div class="nav-item" id="nav-cashforecast" onclick="showSection('cashforecast',this)"><span class="icon">💹</span>資金預估表</div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
@@ -370,7 +370,7 @@
         <div class="card">
           <div class="card-title">👥 人員帳號列表</div>
           <div class="table-wrap"><table>
-            <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead>
+            <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th>權限</th><th>建立時間</th><th>操作</th></tr></thead>
             <tbody id="user-table"></tbody>
           </table></div>
         </div>
@@ -1114,12 +1114,32 @@
         <input type="text" id="au-hint" placeholder="例：我的生日、寵物名字…">
       </div>
     </div>
+    <div class="form-group" id="au-perm-group">
+      <label>功能權限（管理員固定可看全部；個人行事曆固定僅本人可見，不需設定）</label>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;padding:10px 12px;background:var(--gray-100);border-radius:var(--radius)" id="au-perm-checks"></div>
+    </div>
     <div style="padding:8px 12px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--blue);margin-bottom:4px">
       💡 密碼提示不要直接寫密碼，填寫可幫助記憶的線索即可
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-adduser')">取消</button>
       <button class="btn btn-primary" onclick="saveUser()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 編輯人員權限 -->
+<div class="modal-overlay" id="modal-edit-perm">
+  <div class="modal" style="width:420px">
+    <div class="modal-title" id="ep-title">🔐 編輯權限</div>
+    <input type="hidden" id="ep-user-id">
+    <div class="form-group">
+      <label>功能權限（個人行事曆固定僅本人可見，不需設定）</label>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;padding:10px 12px;background:var(--gray-100);border-radius:var(--radius)" id="ep-perm-checks"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-perm')">取消</button>
+      <button class="btn btn-primary" onclick="saveUserPermissions()">儲存</button>
     </div>
   </div>
 </div>
@@ -1294,7 +1314,7 @@ async function doLogin(){
     const accounts=await sbGet('accounts',`username=eq.${encodeURIComponent(u)}&active=eq.true`);
     const acc=accounts.find(a=>a.password===p);
     if(!acc){document.getElementById('login-err').textContent='帳號或密碼錯誤，請重新輸入';return;}
-    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role};
+    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role,permissions:acc.permissions||null};
     await sbInsert('login_logs',{id:pid(),user_id:acc.id,name:acc.name,username:acc.username,login_at:nowStr(),logout_at:null,action:'登入'});
     await enterApp();
   }catch(e){document.getElementById('login-err').textContent='連線失敗，請確認網路';}
@@ -1309,6 +1329,7 @@ async function enterApp(){
   document.getElementById('topbar-name').textContent=currentUser.name;
   document.getElementById('avatar-initial').textContent=currentUser.name.slice(0,1);
   if(currentUser.role==='admin'){document.querySelectorAll('.admin-only').forEach(el=>el.style.display='flex');}
+  applyPermissionVisibility();
   showNotify('資料載入中...','');
   await loadAllCache();
   showNotify('載入完成 ✓','success');
@@ -1369,7 +1390,7 @@ async function loadAllCache(){
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
   CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
-  CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||''}));
+  CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||'',permissions:a.permissions||null}));
   CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,startTime:s.start_time||null,endDate:s.end_date,endTime:s.end_time||null,note:s.note,createdAt:s.created_at}));
   CACHE.personalSchedules=personalSchedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,date:s.date,title:s.title,leaveType:s.leave_type,note:s.note,createdAt:s.created_at}));
   CACHE.pettyCashRecords=pettyCashRecords.map(r=>({id:r.id,recordDate:r.record_date,prevBalance:Number(r.prev_balance||0),income:Number(r.income||0),expense:Number(r.expense||0),balance:Number(r.balance||0),countedAmount:r.counted_amount===null?null:Number(r.counted_amount),difference:r.difference===null?null:Number(r.difference),note:r.note||'',createdBy:r.created_by,updatedAt:r.updated_at}));
@@ -1396,6 +1417,7 @@ async function doLogout(){
 
 // ── NAV ──
 function showSection(id,el){
+  if(!hasPerm(id)){ showNotify('您沒有此功能的使用權限，請聯絡管理員','error'); return; }
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
@@ -1699,9 +1721,26 @@ function sendKPIMail(){
 }
 
 // ── USERS ──
+const PERMISSION_SECTIONS=[
+  {key:'payment',label:'繳單進度'},
+  {key:'weekly',label:'週報填寫'},
+  {key:'kpi',label:'月度KPI'},
+  {key:'schedule',label:'排休月曆'},
+  {key:'pettycash',label:'零用金紀錄'},
+  {key:'cashforecast',label:'資金預估表'},
+];
+function permCheckboxesHtml(idPrefix,checkedKeys){
+  return PERMISSION_SECTIONS.map(s=>{
+    const checked=checkedKeys.includes(s.key)?'checked':'';
+    return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:400">
+      <input type="checkbox" id="${idPrefix}-${s.key}" ${checked} style="width:auto"> ${s.label}
+    </label>`;
+  }).join('');
+}
 function openAddUserModal(){
   ['au-name','au-username','au-pass','au-hint'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('au-role').value='user';
+  document.getElementById('au-perm-checks').innerHTML=permCheckboxesHtml('au',PERMISSION_SECTIONS.map(s=>s.key));
   document.getElementById('modal-adduser').classList.add('open');
 }
 async function saveUser(){
@@ -1712,7 +1751,8 @@ async function saveUser(){
   const hint=document.getElementById('au-hint').value.trim();
   if(!name||!username||!password){showNotify('請填寫完整資料','error');return;}
   if(CACHE.accounts.find(a=>a.username===username)){showNotify('帳號已存在','error');return;}
-  const rec={id:pid(),name,username,password,role,hint,active:true,created:nowStr()};
+  const permissions=PERMISSION_SECTIONS.filter(s=>document.getElementById('au-'+s.key).checked).map(s=>s.key);
+  const rec={id:pid(),name,username,password,role,hint,active:true,created:nowStr(),permissions};
   const ok=await sbInsert('accounts',rec);
   if(ok){
     CACHE.accounts.push(rec);
@@ -1772,7 +1812,48 @@ async function adminResetPassword(){
 }
 function renderUserTable(){
   const accounts=CACHE.accounts;
-  document.getElementById('user-table').innerHTML=accounts.map(a=>`<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td>${a.created}</td><td><button class="btn btn-sm btn-outline" onclick="toggleUserActive('${a.id}',${!a.active})">${a.active?'停用':'啟用'}</button></td></tr>`).join('');
+  document.getElementById('user-table').innerHTML=accounts.map(a=>{
+    const permLabel = a.role==='admin' ? '全部（管理員）' : `${(a.permissions||[]).length} / ${PERMISSION_SECTIONS.length} 項`;
+    return `<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td>${permLabel}</td><td>${a.created}</td><td>
+      <button class="btn btn-sm btn-outline" onclick="toggleUserActive('${a.id}',${!a.active})">${a.active?'停用':'啟用'}</button>
+      ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditPermModal('${a.id}')">權限</button>`:''}
+    </td></tr>`;
+  }).join('');
+}
+function openEditPermModal(userId){
+  const acc=CACHE.accounts.find(a=>a.id===userId);
+  if(!acc) return;
+  document.getElementById('ep-user-id').value=userId;
+  document.getElementById('ep-title').textContent=`🔐 編輯權限：${acc.name}`;
+  document.getElementById('ep-perm-checks').innerHTML=permCheckboxesHtml('ep',acc.permissions||PERMISSION_SECTIONS.map(s=>s.key));
+  document.getElementById('modal-edit-perm').classList.add('open');
+}
+async function saveUserPermissions(){
+  const userId=document.getElementById('ep-user-id').value;
+  const permissions=PERMISSION_SECTIONS.filter(s=>document.getElementById('ep-'+s.key).checked).map(s=>s.key);
+  const ok=await sbUpdate('accounts',userId,{permissions});
+  if(ok){
+    const acc=CACHE.accounts.find(a=>a.id===userId);
+    if(acc) acc.permissions=permissions;
+    if(currentUser && currentUser.id===userId){ currentUser.permissions=permissions; applyPermissionVisibility(); }
+    closeModal('modal-edit-perm');
+    renderUserTable();
+    showNotify('權限已更新 ✓','success');
+  }else{showNotify('儲存失敗','error');}
+}
+function hasPerm(section){
+  if(!currentUser) return false;
+  if(currentUser.role==='admin') return true;
+  const gated=PERMISSION_SECTIONS.some(s=>s.key===section);
+  if(!gated) return true; // 非權限管控的功能（如首頁、個人行事曆、帳號管理等）一律可存取
+  if(!currentUser.permissions) return true; // 舊帳號未設定 = 預設全部開放，避免既有人員權限突然被鎖住
+  return currentUser.permissions.includes(section);
+}
+function applyPermissionVisibility(){
+  PERMISSION_SECTIONS.forEach(s=>{
+    const el=document.getElementById('nav-'+s.key);
+    if(el) el.style.display=hasPerm(s.key)?'flex':'none';
+  });
 }
 async function toggleUserActive(id,active){
   const ok=await sbUpdate('accounts',id,{active});
