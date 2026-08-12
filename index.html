@@ -94,6 +94,18 @@
 
   /* TABLE */
   .table-wrap{overflow-x:auto;}
+  /* 資金預估表：仿 Excel 樣式 */
+  .cf-table{border-collapse:collapse;background:#fff;}
+  .cf-table th,.cf-table td{border:1px solid #000;padding:0;}
+  .cf-table th{background:#f0f0f0;color:#000;font-weight:700;text-align:center;font-size:11.5px;padding:5px 4px;}
+  .cf-table td{text-align:right;}
+  .cf-table td.cf-label{text-align:left;padding:4px 6px;background:#fff;white-space:nowrap;}
+  .cf-table td.cf-section{background:#d9d9d9;color:#000;font-weight:700;padding:5px 8px;text-align:left;}
+  .cf-table tr.cf-calc td{background:#fff2cc;font-weight:700;}
+  .cf-table td input{width:100%;box-sizing:border-box;border:none;background:transparent;text-align:right;padding:4px 6px;font-family:inherit;font-size:12px;color:#000;}
+  .cf-table td input:focus{background:#fff9c4;outline:2px solid #1a73e8;outline-offset:-2px;}
+  .cf-table td.cf-readonly{background:#f5f5f5;color:#444;padding:4px 6px;}
+  .cf-table td.cf-total-col{background:#fce8b2;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{background:var(--navy);color:var(--white);padding:10px 12px;text-align:left;font-weight:600;font-size:12px;letter-spacing:.3px;}
   td{padding:10px 12px;border-bottom:1px solid var(--gray-200);color:var(--gray-800);}
@@ -205,6 +217,7 @@
         <div class="nav-item" onclick="showSection('schedule',this)"><span class="icon">🗓️</span>排休月曆</div>
         <div class="nav-item" onclick="showSection('personal',this)"><span class="icon">📆</span>個人行事曆</div>
         <div class="nav-item" onclick="showSection('pettycash',this)"><span class="icon">💰</span>零用金紀錄</div>
+        <div class="nav-item" onclick="showSection('cashforecast',this)"><span class="icon">💹</span>資金預估表</div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
@@ -564,6 +577,51 @@
             <thead><tr><th>日期</th><th>星期</th><th>前日餘額</th><th>收入</th><th>支出</th><th>本日餘額</th><th>實點金額</th><th>差異</th><th>備註</th><th>操作</th></tr></thead>
             <tbody id="pettycash-table"></tbody>
           </table></div>
+        </div>
+      </div>
+
+      <!-- 資金預估表 -->
+      <div class="section" id="sec-cashforecast">
+        <div class="page-header">
+          <div><div class="page-title">資金預估表</div><div class="page-subtitle">依月份建立資金運用預估，科目沿用原表固定清單</div></div>
+          <button class="btn btn-primary" onclick="openCFMonthModal()">＋ 新增月份</button>
+        </div>
+
+        <div class="filter-bar">
+          <div class="form-group"><label>選擇月份</label>
+            <select id="cf-month-select" onchange="selectCFMonth(this.value)"><option value="">請先新增月份</option></select>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="openCFMonthModal(true)" id="cf-edit-month-btn" style="display:none">編輯月份資訊</button>
+          <button class="btn btn-gold btn-sm" onclick="openCFGenerateModal()" id="cf-generate-btn" style="display:none">⚡ 一鍵產生本月常用週期</button>
+          <button class="btn btn-outline btn-sm" onclick="openCFPeriodModal()" id="cf-add-period-btn" style="display:none">＋ 新增單一期別</button>
+          <button class="btn btn-outline btn-sm" onclick="toggleCFPeriodManage()" id="cf-manage-period-btn" style="display:none">🗑 管理期別</button>
+          <button class="btn btn-outline btn-sm" onclick="cfApplyDefaultARRatios()" id="cf-apply-ratio-btn" style="display:none">📌 套用固定比例(原始檔案)</button>
+        </div>
+
+        <div id="cf-period-manage-list" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+
+        <div id="cf-content" style="display:none">
+          <div class="card" id="cf-ar-note-card">
+            <div class="card-title">📌 應收帳款預估說明</div>
+            <div id="cf-ar-note" style="font-size:13px;color:var(--gray-600);line-height:1.8"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">📊 資金運用預估表</div>
+            <div class="table-wrap"><table id="cf-main-table" class="cf-table">
+              <thead id="cf-table-head"></thead>
+              <tbody id="cf-table-body"></tbody>
+            </table></div>
+            <div id="cf-below-notes" style="margin-top:16px"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🏦 銀行存款餘額（分帳戶，供對帳差額核對用）</div>
+            <div class="table-wrap"><table id="cf-bank-table" class="cf-table">
+              <thead id="cf-bank-head"></thead>
+              <tbody id="cf-bank-body"></tbody>
+            </table></div>
+          </div>
         </div>
       </div>
 
@@ -1114,6 +1172,74 @@
   </div>
 </div>
 
+<!-- MODAL: 資金預估表 - 新增/編輯月份 -->
+<div class="modal-overlay" id="modal-cf-month">
+  <div class="modal" style="width:640px">
+    <div class="modal-title" id="cf-month-modal-title">💹 新增預估月份</div>
+    <input type="hidden" id="cfm-edit-id">
+    <div class="form-row cols2">
+      <div class="form-group"><label>月份標籤（例：11507 代表民國115年7月）</label><input type="text" id="cfm-label" placeholder="11507"></div>
+      <div class="form-group"><label>製表日</label><input type="date" id="cfm-prepared-date"></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--navy);margin:14px 0 8px">應收帳款預估公式輸入值</div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>上月應收帳款基數（萬）</label><input type="number" id="cfm-prev-base" placeholder="例：10025"></div>
+      <div class="form-group"><label>比例 K2（例：0.8117）</label><input type="number" step="0.0001" id="cfm-prev-ratio"></div>
+    </div>
+    <div class="form-row"><div class="form-group"><label>上月應收帳款計算式說明</label><input type="text" id="cfm-prev-note" placeholder="115/6月應收預估(5月份應收帳款...)"></div></div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>本月應收帳款基數（萬）</label><input type="number" id="cfm-curr-base" placeholder="例：7973"></div>
+      <div class="form-group"><label>比例 K3（例：0.1883）</label><input type="number" step="0.0001" id="cfm-curr-ratio"></div>
+    </div>
+    <div class="form-row"><div class="form-group"><label>本月應收帳款計算式說明</label><input type="text" id="cfm-curr-note" placeholder="115/7月應收預估(6月份應收帳款...)"></div></div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>本月大額支出預估備註</label><input type="text" id="cfm-big-expense" placeholder="例：營業稅250萬、真納37萬"></div>
+      <div class="form-group"><label>每月償還董事長備註</label><input type="text" id="cfm-chairman" placeholder="例：每月償還董事長45萬"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cf-month')">取消</button>
+      <button class="btn btn-primary" onclick="saveCFMonth()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 資金預估表 - 新增期別 -->
+<div class="modal-overlay" id="modal-cf-period">
+  <div class="modal" style="width:460px">
+    <div class="modal-title">📆 新增期別欄位</div>
+    <div class="form-row">
+      <div class="form-group"><label>期別標籤（例：7/1-7/4 或 2026-07-05）</label><input type="text" id="cfp-label" placeholder="7/1-7/4"></div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>對應日期（單日欄位時填寫，選填）</label><input type="date" id="cfp-date"></div>
+      <div class="form-group"><label>本月應收帳款(預估)比例（選填，如 0.3）</label><input type="number" step="0.01" id="cfp-ar-ratio"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:4px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="cfp-is-total" style="width:auto"> 設為「實際合計」欄（對應原表 O 欄，加總全月）</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cf-period')">取消</button>
+      <button class="btn btn-primary" onclick="saveCFPeriod()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 資金預估表 - 一鍵產生本月週期 -->
+<div class="modal-overlay" id="modal-cf-generate">
+  <div class="modal" style="width:460px">
+    <div class="modal-title">⚡ 一鍵產生本月常用週期</div>
+    <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:12px;line-height:1.7">
+      將依原表慣用切法自動產生期別：前月26日～當月4日、5日、6-9日、10-11日、12日、13-14日、15-19日、20日、21-24日、25日，並附加「實際合計」欄。<br>
+      <strong style="color:var(--red)">僅適用於尚未建立任何期別的月份</strong>，避免與現有資料重複。
+    </div>
+    <div class="form-group"><label>對應西元年月</label><input type="month" id="cfg-yearmonth"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cf-generate')">取消</button>
+      <button class="btn btn-primary" onclick="generateCFTemplate()">產生期別</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 //  SUPABASE 設定
@@ -1156,7 +1282,8 @@ function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 let currentUser=null;
-let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[]};
+let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
+let currentCFMonthId=null;
 
 // ── LOGIN ──
 async function doLogin(){
@@ -1222,7 +1349,7 @@ function startAutoRefresh(){
 }
 
 async function loadAllCache(){
-  const [payments,weeklies,kpis,loginLogs,accounts,schedules,personalSchedules,pettyCashRecords,pettyCashCounts]=await Promise.all([
+  const [payments,weeklies,kpis,loginLogs,accounts,schedules,personalSchedules,pettyCashRecords,pettyCashCounts,cfMonths,cfPeriods,cfCategories,cfValues,cfBankBalance]=await Promise.all([
     sbGet('payments','order=created_at.desc'),
     sbGet('weeklies','order=created_at.desc'),
     sbGet('kpis','order=created_at.desc'),
@@ -1232,6 +1359,11 @@ async function loadAllCache(){
     sbGet('personal_schedules','order=date.asc'),
     sbGet('petty_cash_records','order=record_date.asc'),
     sbGet('petty_cash_counts','order=count_date.asc'),
+    sbGet('cash_forecast_months','order=month_label.desc'),
+    sbGet('cash_forecast_periods','order=period_order.asc'),
+    sbGet('cash_forecast_categories','order=row_order.asc'),
+    sbGet('cash_forecast_values'),
+    sbGet('cash_forecast_bank_balance'),
   ]);
   CACHE.payments=payments.map(p=>({id:p.id,userId:p.user_id,area:p.area,fillDate:p.fill_date,date:p.date,note:p.note,paymentType:p.payment_type||'monthly',user:p.user,createdAt:p.created_at}));
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
@@ -1242,13 +1374,18 @@ async function loadAllCache(){
   CACHE.personalSchedules=personalSchedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,date:s.date,title:s.title,leaveType:s.leave_type,note:s.note,createdAt:s.created_at}));
   CACHE.pettyCashRecords=pettyCashRecords.map(r=>({id:r.id,recordDate:r.record_date,prevBalance:Number(r.prev_balance||0),income:Number(r.income||0),expense:Number(r.expense||0),balance:Number(r.balance||0),countedAmount:r.counted_amount===null?null:Number(r.counted_amount),difference:r.difference===null?null:Number(r.difference),note:r.note||'',createdBy:r.created_by,updatedAt:r.updated_at}));
   CACHE.pettyCashCounts=pettyCashCounts.map(c=>({id:c.id,countDate:c.count_date,denomination:Number(c.denomination),quantity:Number(c.quantity||0),subtotal:Number(c.subtotal||0),createdBy:c.created_by}));
+  CACHE.cfMonths=cfMonths.map(m=>({id:m.id,monthLabel:m.month_label,preparedDate:m.prepared_date,formNo:m.form_no,prevBase:m.prev_month_ar_base===null?null:Number(m.prev_month_ar_base),prevNote:m.prev_month_ar_note||'',prevRatio:m.prev_month_ratio===null?null:Number(m.prev_month_ratio),currBase:m.curr_month_ar_base===null?null:Number(m.curr_month_ar_base),currNote:m.curr_month_ar_note||'',currRatio:m.curr_month_ratio===null?null:Number(m.curr_month_ratio),bigExpenseNote:m.big_expense_note||'',chairmanNote:m.chairman_repayment_note||''}));
+  CACHE.cfPeriods=cfPeriods.map(p=>({id:p.id,monthId:p.month_id,order:p.period_order,label:p.label,periodDate:p.period_date,arRatio:p.ar_ratio===null?null:Number(p.ar_ratio),isTotal:!!p.is_total_column}));
+  CACHE.cfCategories=cfCategories.map(c=>({id:c.id,section:c.section,order:c.row_order,name:c.category_name,hasRate:!!c.has_rate,isCalculated:!!c.is_calculated,note:c.note||''}));
+  CACHE.cfValues=cfValues.map(v=>({id:v.id,monthId:v.month_id,periodId:v.period_id,categoryId:v.category_id,amount:Number(v.amount||0),rate:v.rate===null?null:Number(v.rate)}));
+  CACHE.cfBankBalance=cfBankBalance.map(b=>({id:b.id,monthId:b.month_id,periodId:b.period_id,accountName:b.account_name,amount:Number(b.amount||0)}));
 }
 
 async function doLogout(){
   if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; }
   const logs=await sbGet('login_logs',`user_id=eq.${currentUser.id}&logout_at=is.null&limit=1`);
   if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
-  currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[]};
+  currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-user').value='';
@@ -1269,6 +1406,7 @@ function showSection(id,el){
   if(id==='schedule'){ initScheduleForm(); renderScheduleCalendar(); }
   if(id==='personal'){ renderPersonalCalendar(); }
   if(id==='pettycash'){ renderPettyCashTable(); }
+  if(id==='cashforecast'){ renderCFMonthSelect(); }
   if(id==='changepwd'){
     const acc = CACHE.accounts.find(a=>a.id===currentUser.id);
     const hintEl = document.getElementById('pwd-hint');
@@ -2579,7 +2717,477 @@ function renderPettyCashTable(){
   </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--gray-400);padding:30px">尚無零用金紀錄</td></tr>';
 }
 
-const TABLE_CACHE_KEY={login_logs:'loginLogs',petty_cash_records:'pettyCashRecords',petty_cash_counts:'pettyCashCounts'};
+// ══════════════════════════════════════════
+//  資金預估表
+// ══════════════════════════════════════════
+const CF_SECTIONS=['期初','收入','支出','借款','定存(台幣)','定存(美金)','投資','營運資金','土地建物','玉山','臺銀'];
+const CF_BANK_ACCOUNTS=['展晟','個人','外幣(香港)','外幣(台灣)','調整'];
+
+function cfPeriodsForMonth(monthId){
+  return CACHE.cfPeriods.filter(p=>p.monthId===monthId).sort((a,b)=>a.order-b.order);
+}
+function cfCategoryValue(periodId,categoryId){
+  const v=CACHE.cfValues.find(x=>x.periodId===periodId&&x.categoryId===categoryId);
+  return v?v.amount:0;
+}
+function cfBankValue(periodId,accountName){
+  const b=CACHE.cfBankBalance.find(x=>x.periodId===periodId&&x.accountName===accountName);
+  return b?b.amount:0;
+}
+function cfCategoryTotalAcrossPeriods(categoryId,normalPeriods){
+  return normalPeriods.reduce((s,p)=>s+cfCategoryValue(p.id,categoryId),0);
+}
+function fmtN(n){ return Math.round(n||0).toLocaleString(); }
+
+// 依序計算每個非合計期別的：前期餘額(自動延續上一期)/收入/支出/本月預計餘額/銀行餘額合計/差異
+function cfComputeSummaries(normalPeriods){
+  const incomeIds=CACHE.cfCategories.filter(c=>c.section==='收入').map(c=>c.id);
+  const expenseIds=CACHE.cfCategories.filter(c=>c.section==='支出').map(c=>c.id);
+  let summaries=[]; let prevEnding=null;
+  normalPeriods.forEach((p,idx)=>{
+    const openVal = idx===0 ? cfCategoryValue(p.id,'cf-cat-01') : prevEnding;
+    const income = incomeIds.reduce((s,id)=>s+cfCategoryValue(p.id,id),0);
+    const expense = expenseIds.reduce((s,id)=>s+cfCategoryValue(p.id,id),0);
+    const loanIn = cfCategoryValue(p.id,'cf-cat-50');
+    const loanOut = cfCategoryValue(p.id,'cf-cat-51');
+    const ending = openVal+income-expense+loanIn-loanOut;
+    const bankTotal = CF_BANK_ACCOUNTS.reduce((s,a)=>s+cfBankValue(p.id,a),0);
+    const diff = bankTotal-ending;
+    summaries.push({period:p,open:openVal,income,expense,loanIn,loanOut,ending,bankTotal,diff});
+    prevEnding=ending;
+  });
+  return summaries;
+}
+
+function renderCFMonthSelect(){
+  const sel=document.getElementById('cf-month-select');
+  const months=[...CACHE.cfMonths].sort((a,b)=>b.monthLabel.localeCompare(a.monthLabel));
+  if(!months.length){
+    sel.innerHTML='<option value="">請先新增月份</option>';
+    currentCFMonthId=null;
+    document.getElementById('cf-content').style.display='none';
+    document.getElementById('cf-edit-month-btn').style.display='none';
+    document.getElementById('cf-generate-btn').style.display='none';
+    document.getElementById('cf-manage-period-btn').style.display='none';
+    document.getElementById('cf-apply-ratio-btn').style.display='none';
+    document.getElementById('cf-add-period-btn').style.display='none';
+    return;
+  }
+  sel.innerHTML=months.map(m=>`<option value="${m.id}">${m.monthLabel}</option>`).join('');
+  if(!currentCFMonthId || !months.find(m=>m.id===currentCFMonthId)) currentCFMonthId=months[0].id;
+  sel.value=currentCFMonthId;
+  selectCFMonth(currentCFMonthId);
+}
+function escAttr(s){ return (s===null||s===undefined?'':String(s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function selectCFMonth(monthId){
+  currentCFMonthId=monthId;
+  if(!monthId){document.getElementById('cf-content').style.display='none';return;}
+  document.getElementById('cf-content').style.display='block';
+  document.getElementById('cf-edit-month-btn').style.display='inline-flex';
+  document.getElementById('cf-add-period-btn').style.display='inline-flex';
+  const hasPeriods=cfPeriodsForMonth(monthId).length>0;
+  document.getElementById('cf-generate-btn').style.display=hasPeriods?'none':'inline-flex';
+  document.getElementById('cf-manage-period-btn').style.display=hasPeriods?'inline-flex':'none';
+  document.getElementById('cf-apply-ratio-btn').style.display=hasPeriods?'inline-flex':'none';
+  document.getElementById('cf-period-manage-list').style.display='none';
+  renderCFGrid(monthId);
+}
+
+function toggleCFPeriodManage(){
+  const el=document.getElementById('cf-period-manage-list');
+  const show=el.style.display==='none';
+  el.style.display=show?'flex':'none';
+  if(show) renderCFPeriodManageList();
+}
+function renderCFPeriodManageList(){
+  const periods=cfPeriodsForMonth(currentCFMonthId);
+  document.getElementById('cf-period-manage-list').innerHTML=periods.map(p=>
+    `<span class="badge ${p.isTotal?'badge-orange':'badge-blue'}" style="display:inline-flex;align-items:center;gap:6px">${p.label}${p.isTotal?'（合計欄）':''}<span onclick="deleteCFPeriod('${p.id}')" style="cursor:pointer;font-weight:700;color:var(--red)" title="刪除此期別">✕</span></span>`
+  ).join('') || '<span style="color:var(--gray-400);font-size:13px">尚無期別</span>';
+}
+async function cfRenamePeriod(periodId,newLabel){
+  newLabel=newLabel.trim();
+  if(!newLabel){showNotify('名稱不可為空','error');renderCFGrid(currentCFMonthId);return;}
+  const ok=await sbUpdate('cash_forecast_periods',periodId,{label:newLabel});
+  if(ok){
+    const p=CACHE.cfPeriods.find(x=>x.id===periodId); if(p) p.label=newLabel;
+    renderCFGrid(currentCFMonthId);
+  }else{showNotify('儲存失敗','error');renderCFGrid(currentCFMonthId);}
+}
+
+const CF_MONTH_FIELD_MAP={prev_month_ar_base:'prevBase',prev_month_ratio:'prevRatio',prev_month_ar_note:'prevNote',curr_month_ar_base:'currBase',curr_month_ratio:'currRatio',curr_month_ar_note:'currNote',big_expense_note:'bigExpenseNote',chairman_repayment_note:'chairmanNote'};
+async function cfSaveMonthField(dbField,rawValue,isNumber){
+  const month=CACHE.cfMonths.find(m=>m.id===currentCFMonthId);
+  if(!month) return;
+  const value = isNumber ? (rawValue===''?null:Number(rawValue)) : (rawValue.trim()||null);
+  const ok=await sbUpdate('cash_forecast_months',month.id,{[dbField]:value,updated_at:nowStr()});
+  if(ok){
+    month[CF_MONTH_FIELD_MAP[dbField]]=value;
+    if(['prev_month_ar_base','prev_month_ratio','curr_month_ar_base','curr_month_ratio'].includes(dbField)){
+      await cfRecomputeARAmounts(currentCFMonthId);
+    }
+    renderCFGrid(currentCFMonthId);
+  }else{showNotify('儲存失敗','error');}
+}
+
+function openCFGenerateModal(){
+  if(!currentCFMonthId){showNotify('請先新增/選擇月份','error');return;}
+  if(cfPeriodsForMonth(currentCFMonthId).length>0){showNotify('此月份已有期別，請改用「新增單一期別」','error');return;}
+  const today=new Date();
+  document.getElementById('cfg-yearmonth').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('modal-cf-generate').classList.add('open');
+}
+async function generateCFTemplate(){
+  const ym=document.getElementById('cfg-yearmonth').value;
+  if(!ym){showNotify('請選擇年月','error');return;}
+  if(cfPeriodsForMonth(currentCFMonthId).length>0){showNotify('此月份已有期別，無法重複產生','error');closeModal('modal-cf-generate');return;}
+  const [y,m]=ym.split('-').map(Number);
+  const prevMonthEnd=new Date(y,m-1,0).getDate(); // 上月最後一天
+  const pad=n=>String(n).padStart(2,'0');
+  const fmt=(yy,mm,dd)=>`${yy}-${pad(mm)}-${pad(dd)}`;
+  const prevY = m===1 ? y-1 : y;
+  const prevM = m===1 ? 12 : m-1;
+  const segments=[
+    {label:`26-${prevMonthEnd}`, start:fmt(prevY,prevM,26), end:fmt(prevY,prevM,prevMonthEnd), ratio:null},
+    {label:`1-4`, start:fmt(y,m,1), end:fmt(y,m,4), ratio:null},
+    {label:`5`, start:fmt(y,m,5), end:fmt(y,m,5), single:true, ratio:0.3},
+    {label:`6-9`, start:fmt(y,m,6), end:fmt(y,m,9), ratio:null},
+    {label:`10-11`, start:fmt(y,m,10), end:fmt(y,m,11), ratio:0.2},
+    {label:`12`, start:fmt(y,m,12), end:fmt(y,m,12), single:true, ratio:null},
+    {label:`13-14`, start:fmt(y,m,13), end:fmt(y,m,14), ratio:0.2},
+    {label:`15-19`, start:fmt(y,m,15), end:fmt(y,m,19), ratio:null},
+    {label:`20`, start:fmt(y,m,20), end:fmt(y,m,20), single:true, ratio:0.15},
+    {label:`21-24`, start:fmt(y,m,21), end:fmt(y,m,24), ratio:null},
+    {label:`25`, start:fmt(y,m,25), end:fmt(y,m,25), single:true, ratio:0.15},
+  ];
+  const rows=segments.map((seg,idx)=>({
+    id:pid(), month_id:currentCFMonthId, period_order:idx+1,
+    label: seg.single ? seg.end : `${seg.start.slice(5).replace('-','/')}-${seg.end.slice(5).replace('-','/')}`,
+    period_date: seg.single ? seg.end : null,
+    ar_ratio: seg.ratio, is_total_column:false,
+  }));
+  rows.push({id:pid(),month_id:currentCFMonthId,period_order:rows.length+1,label:'實際合計',period_date:null,ar_ratio:null,is_total_column:true});
+  let allOk=true;
+  for(const row of rows){ const ok=await sbInsert('cash_forecast_periods',row); if(!ok) allOk=false; }
+  closeModal('modal-cf-generate');
+  await loadAllCache();
+  await cfRecomputeARAmounts(currentCFMonthId);
+  document.getElementById('cf-generate-btn').style.display='none';
+  document.getElementById('cf-manage-period-btn').style.display='inline-flex';
+  document.getElementById('cf-apply-ratio-btn').style.display='inline-flex';
+  renderCFGrid(currentCFMonthId);
+  showNotify(allOk?'期別已自動產生（含固定比例）✓':'部分期別產生失敗，請檢查','success');
+}
+
+function openCFMonthModal(editMode){
+  const ids=['cfm-label','cfm-prepared-date','cfm-prev-base','cfm-prev-ratio','cfm-prev-note','cfm-curr-base','cfm-curr-ratio','cfm-curr-note','cfm-big-expense','cfm-chairman'];
+  document.getElementById('cfm-edit-id').value='';
+  document.getElementById('cf-month-modal-title').textContent='💹 新增預估月份';
+  ids.forEach(id=>document.getElementById(id).value='');
+  if(editMode && currentCFMonthId){
+    const m=CACHE.cfMonths.find(x=>x.id===currentCFMonthId);
+    if(m){
+      document.getElementById('cfm-edit-id').value=m.id;
+      document.getElementById('cf-month-modal-title').textContent='💹 編輯預估月份';
+      document.getElementById('cfm-label').value=m.monthLabel;
+      document.getElementById('cfm-prepared-date').value=m.preparedDate||'';
+      document.getElementById('cfm-prev-base').value=m.prevBase??'';
+      document.getElementById('cfm-prev-ratio').value=m.prevRatio??'';
+      document.getElementById('cfm-prev-note').value=m.prevNote||'';
+      document.getElementById('cfm-curr-base').value=m.currBase??'';
+      document.getElementById('cfm-curr-ratio').value=m.currRatio??'';
+      document.getElementById('cfm-curr-note').value=m.currNote||'';
+      document.getElementById('cfm-big-expense').value=m.bigExpenseNote||'';
+      document.getElementById('cfm-chairman').value=m.chairmanNote||'';
+    }
+  }
+  document.getElementById('modal-cf-month').classList.add('open');
+}
+async function saveCFMonth(){
+  const id=document.getElementById('cfm-edit-id').value;
+  const label=document.getElementById('cfm-label').value.trim();
+  if(!label){showNotify('請輸入月份標籤','error');return;}
+  const numOrNull=v=>v?Number(v):null;
+  const payload={
+    month_label:label,
+    prepared_date:document.getElementById('cfm-prepared-date').value||null,
+    prev_month_ar_base:numOrNull(document.getElementById('cfm-prev-base').value),
+    prev_month_ratio:numOrNull(document.getElementById('cfm-prev-ratio').value),
+    prev_month_ar_note:document.getElementById('cfm-prev-note').value.trim()||null,
+    curr_month_ar_base:numOrNull(document.getElementById('cfm-curr-base').value),
+    curr_month_ratio:numOrNull(document.getElementById('cfm-curr-ratio').value),
+    curr_month_ar_note:document.getElementById('cfm-curr-note').value.trim()||null,
+    big_expense_note:document.getElementById('cfm-big-expense').value.trim()||null,
+    chairman_repayment_note:document.getElementById('cfm-chairman').value.trim()||null,
+    updated_at:nowStr(),
+  };
+  let ok, newId=id;
+  if(id){
+    ok=await sbUpdate('cash_forecast_months',id,payload);
+  }else{
+    newId=pid();
+    ok=await sbInsert('cash_forecast_months',{id:newId,...payload,created_by:currentUser.name});
+  }
+  if(ok){
+    closeModal('modal-cf-month');
+    await loadAllCache();
+    currentCFMonthId=newId;
+    renderCFMonthSelect();
+    showNotify('月份資訊已儲存 ✓','success');
+  }else{showNotify('儲存失敗','error');}
+}
+
+function openCFPeriodModal(){
+  if(!currentCFMonthId){showNotify('請先新增/選擇月份','error');return;}
+  ['cfp-label','cfp-date','cfp-ar-ratio'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cfp-is-total').checked=false;
+  document.getElementById('modal-cf-period').classList.add('open');
+}
+async function saveCFPeriod(){
+  const label=document.getElementById('cfp-label').value.trim();
+  if(!label){showNotify('請輸入期別標籤','error');return;}
+  const periods=cfPeriodsForMonth(currentCFMonthId);
+  const order=periods.length? Math.max(...periods.map(p=>p.order))+1 : 1;
+  const payload={id:pid(),month_id:currentCFMonthId,period_order:order,label,
+    period_date:document.getElementById('cfp-date').value||null,
+    ar_ratio:document.getElementById('cfp-ar-ratio').value?Number(document.getElementById('cfp-ar-ratio').value):null,
+    is_total_column:document.getElementById('cfp-is-total').checked};
+  const ok=await sbInsert('cash_forecast_periods',payload);
+  if(ok){
+    closeModal('modal-cf-period');
+    await loadAllCache();
+    document.getElementById('cf-generate-btn').style.display='none';
+    document.getElementById('cf-manage-period-btn').style.display='inline-flex';
+    document.getElementById('cf-apply-ratio-btn').style.display='inline-flex';
+    renderCFGrid(currentCFMonthId);
+    showNotify('期別已新增 ✓','success');
+  }else{showNotify('新增失敗','error');}
+}
+async function deleteCFPeriod(periodId){
+  if(!confirm('確定要刪除此期別？（該期別所有金額資料將一併刪除）'))return;
+  const ok=await sbDelete('cash_forecast_periods',periodId);
+  if(ok){
+    await loadAllCache();
+    const hasPeriods=cfPeriodsForMonth(currentCFMonthId).length>0;
+    document.getElementById('cf-generate-btn').style.display=hasPeriods?'none':'inline-flex';
+    document.getElementById('cf-manage-period-btn').style.display=hasPeriods?'inline-flex':'none';
+  document.getElementById('cf-apply-ratio-btn').style.display=hasPeriods?'inline-flex':'none';
+    renderCFPeriodManageList();
+    renderCFGrid(currentCFMonthId);
+  }else{showNotify('刪除失敗','error');}
+}
+
+function renderCFGrid(monthId){
+  const month=CACHE.cfMonths.find(m=>m.id===monthId);
+  if(!month) return;
+  const periods=cfPeriodsForMonth(monthId);
+  const normalPeriods=periods.filter(p=>!p.isTotal);
+  const totalPeriod=periods.find(p=>p.isTotal);
+  const summaries=cfComputeSummaries(normalPeriods);
+  let totalSummary=null;
+  if(totalPeriod && summaries.length){
+    const open=summaries[0].open;
+    const income=summaries.reduce((s,x)=>s+x.income,0);
+    const expense=summaries.reduce((s,x)=>s+x.expense,0);
+    const loanIn=summaries.reduce((s,x)=>s+x.loanIn,0);
+    const loanOut=summaries.reduce((s,x)=>s+x.loanOut,0);
+    totalSummary={open,income,expense,loanIn,loanOut,ending:open+income-expense+loanIn-loanOut};
+  }
+
+  // 應收帳款預估說明卡（可直接編輯）
+  const prevAmt=(month.prevBase!==null&&month.prevRatio!==null)?Math.round(month.prevBase*10000*month.prevRatio):null;
+  const currAmt=(month.currBase!==null&&month.currRatio!==null)?Math.round(month.currBase*10000*month.currRatio):null;
+  const totalAR=(prevAmt!==null&&currAmt!==null)?prevAmt+currAmt:null;
+  let ratioHtml='';
+  const ratioPeriods=normalPeriods.filter(p=>p.arRatio!==null);
+  if(totalAR!==null && ratioPeriods.length){
+    ratioHtml=`<div style="margin-top:4px;font-size:12.5px">各期建議金額（供參考，實際請於下方「本月應收帳款(預估)」列自行輸入）：</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">${ratioPeriods.map(p=>`<span class="badge badge-blue">${p.label}：${p.arRatio}×總額≈${fmtN(totalAR*p.arRatio)}</span>`).join('')}</div>`;
+  }
+  document.getElementById('cf-ar-note').innerHTML=`
+    <div class="form-row cols2">
+      <div class="form-group"><label>上月應收帳款基數（萬）</label><input type="number" value="${month.prevBase??''}" onchange="cfSaveMonthField('prev_month_ar_base',this.value,true)"></div>
+      <div class="form-group"><label>比例 K2</label><input type="number" step="0.0001" value="${month.prevRatio??''}" onchange="cfSaveMonthField('prev_month_ratio',this.value,true)"></div>
+    </div>
+    <div class="form-group"><label>上月應收帳款計算式說明</label><input type="text" value="${escAttr(month.prevNote)}" onchange="cfSaveMonthField('prev_month_ar_note',this.value,false)"></div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>本月應收帳款基數（萬）</label><input type="number" value="${month.currBase??''}" onchange="cfSaveMonthField('curr_month_ar_base',this.value,true)"></div>
+      <div class="form-group"><label>比例 K3</label><input type="number" step="0.0001" value="${month.currRatio??''}" onchange="cfSaveMonthField('curr_month_ratio',this.value,true)"></div>
+    </div>
+    <div class="form-group"><label>本月應收帳款計算式說明</label><input type="text" value="${escAttr(month.currNote)}" onchange="cfSaveMonthField('curr_month_ar_note',this.value,false)"></div>
+    ${totalAR!==null?`<div style="margin-top:8px;font-weight:700;color:var(--navy)">本月應收帳款預估總額：NTD ${fmtN(totalAR)}</div>`:''}
+    ${ratioHtml}
+  `;
+
+  document.getElementById('cf-below-notes').innerHTML=`
+    <div class="form-row cols2">
+      <div class="form-group"><label>本月大額支出預估備註</label><input type="text" value="${escAttr(month.bigExpenseNote)}" onchange="cfSaveMonthField('big_expense_note',this.value,false)"></div>
+      <div class="form-group"><label>每月償還董事長備註</label><input type="text" value="${escAttr(month.chairmanNote)}" onchange="cfSaveMonthField('chairman_repayment_note',this.value,false)"></div>
+    </div>
+  `;
+
+  const colCount=normalPeriods.length+(totalPeriod?1:0)+1;
+
+  // 表頭（點擊欄名即可直接編輯，不再顯示叉叉；刪除請用「管理期別」）
+  let headHtml='<tr><th style="min-width:190px;text-align:left">科目</th>';
+  normalPeriods.forEach(p=>{
+    headHtml+=`<th style="min-width:95px;padding:2px"><input value="${escAttr(p.label)}" onchange="cfRenamePeriod('${p.id}',this.value)" style="width:100%;border:none;background:transparent;text-align:center;font-weight:700;font-size:11.5px;color:#000;padding:6px 2px;font-family:inherit"></th>`;
+  });
+  if(totalPeriod) headHtml+=`<th style="min-width:95px;background:#fce8b2">${totalPeriod.label}</th>`;
+  headHtml+='</tr>';
+  document.getElementById('cf-table-head').innerHTML=headHtml;
+
+  const sectionRow=(label)=>`<tr><td class="cf-section" colspan="${colCount}">${label}</td></tr>`;
+  const calcRow=(label,idxFn,totalVal,color)=>{
+    let r=`<tr class="cf-calc"><td class="cf-label">${label}</td>`;
+    normalPeriods.forEach((p,idx)=>{ r+=`<td style="color:${color||'#000'}">${fmtN(idxFn(idx))}</td>`; });
+    if(totalPeriod) r+=`<td class="cf-total-col" style="color:${color||'#000'}">${totalVal!==undefined?fmtN(totalVal):'—'}</td>`;
+    r+='</tr>';
+    return r;
+  };
+
+  let body='';
+  CF_SECTIONS.forEach(section=>{
+    const cats=CACHE.cfCategories.filter(c=>c.section===section).sort((a,b)=>a.order-b.order);
+    if(!cats.length) return;
+    body+=sectionRow(section);
+    cats.forEach(cat=>{
+      body+=`<tr><td class="cf-label">${cat.name}${cat.note?`<div style="font-size:10px;color:var(--gray-400);white-space:normal;max-width:220px">${cat.note}</div>`:''}</td>`;
+      normalPeriods.forEach((p,idx)=>{
+        if(cat.id==='cf-cat-01' && idx>0){
+          body+=`<td class="cf-readonly">${fmtN(summaries[idx].open)}</td>`;
+        }else if(cat.id==='cf-cat-16'){
+          const amt=cfCategoryValue(p.id,cat.id);
+          body+=`<td style="padding:3px;text-align:center">
+            <input type="number" step="0.01" placeholder="比例" value="${p.arRatio??0}" style="width:46px;text-align:center;border:1px solid #bbb;border-radius:3px;font-size:11px;padding:2px" onchange="cfSaveRatio('${p.id}',this.value)">
+            <div style="font-size:11px;color:#333;margin-top:2px">${fmtN(amt)}</div>
+          </td>`;
+        }else{
+          body+=`<td><input type="number" value="${cfCategoryValue(p.id,cat.id)}" onchange="cfSaveValue(this,'${p.id}','${cat.id}')"></td>`;
+        }
+      });
+      if(totalPeriod){
+        const tv = cat.id==='cf-cat-01' ? (totalSummary?totalSummary.open:0) : cfCategoryTotalAcrossPeriods(cat.id,normalPeriods);
+        body+=`<td class="cf-total-col">${fmtN(tv)}</td>`;
+      }
+      body+='</tr>';
+    });
+    if(section==='收入') body+=calcRow('收入合計',(idx)=>summaries[idx].income, totalSummary?totalSummary.income:undefined);
+    if(section==='支出'){
+      body+=calcRow('支出合計',(idx)=>summaries[idx].expense, totalSummary?totalSummary.expense:undefined);
+      body+=calcRow('本月預計餘額(NTD)',(idx)=>summaries[idx].ending, totalSummary?totalSummary.ending:undefined,'#8B1A1A');
+    }
+  });
+  body+=calcRow('和預估差額(檢查用)',(idx)=>summaries[idx].diff, undefined,'#b83232');
+  document.getElementById('cf-table-body').innerHTML=body;
+
+  // 銀行存款餘額表
+  let bankHead='<tr><th style="text-align:left">帳戶</th>';
+  normalPeriods.forEach(p=>bankHead+=`<th>${p.label}</th>`);
+  bankHead+='</tr>';
+  document.getElementById('cf-bank-head').innerHTML=bankHead;
+  let bankBody='';
+  CF_BANK_ACCOUNTS.forEach(acc=>{
+    bankBody+=`<tr><td class="cf-label">${acc}</td>`;
+    normalPeriods.forEach(p=>{
+      bankBody+=`<td><input type="number" value="${cfBankValue(p.id,acc)}" onchange="cfSaveBankValue(this,'${p.id}','${acc}')"></td>`;
+    });
+    bankBody+='</tr>';
+  });
+  bankBody+='<tr class="cf-calc"><td class="cf-label">合計</td>';
+  normalPeriods.forEach((p,idx)=>{ bankBody+=`<td>${fmtN(summaries[idx].bankTotal)}</td>`; });
+  bankBody+='</tr>';
+  document.getElementById('cf-bank-body').innerHTML=bankBody;
+}
+
+async function cfUpsertValue(periodId,categoryId,amount){
+  const existing=CACHE.cfValues.find(v=>v.periodId===periodId&&v.categoryId===categoryId);
+  let ok;
+  if(existing){
+    ok=await sbUpdate('cash_forecast_values',existing.id,{amount});
+    if(ok) existing.amount=amount;
+  }else{
+    const newId=pid();
+    ok=await sbInsert('cash_forecast_values',{id:newId,month_id:currentCFMonthId,period_id:periodId,category_id:categoryId,amount});
+    if(ok) CACHE.cfValues.push({id:newId,monthId:currentCFMonthId,periodId,categoryId,amount,rate:null});
+  }
+  return ok;
+}
+// 依月份的應收帳款基數/比例 + 各期比例，自動重算「本月應收帳款(預估)」金額並寫入
+async function cfRecomputeARAmounts(monthId){
+  const month=CACHE.cfMonths.find(m=>m.id===monthId);
+  if(!month) return;
+  const prevAmt=(month.prevBase!==null&&month.prevRatio!==null)?Math.round(month.prevBase*10000*month.prevRatio):null;
+  const currAmt=(month.currBase!==null&&month.currRatio!==null)?Math.round(month.currBase*10000*month.currRatio):null;
+  const totalAR=(prevAmt!==null&&currAmt!==null)?prevAmt+currAmt:null;
+  if(totalAR===null) return;
+  const periods=cfPeriodsForMonth(monthId).filter(p=>!p.isTotal && p.arRatio!==null);
+  for(const p of periods){
+    await cfUpsertValue(p.id,'cf-cat-16',Math.round(totalAR*p.arRatio));
+  }
+}
+async function cfSaveRatio(periodId,value){
+  const ratio = value===''?null:Number(value);
+  const result=await sbUpdateDebug('cash_forecast_periods',periodId,{ar_ratio:ratio});
+  if(!result.ok){
+    const msg=result.error?.message||result.error?.hint||('HTTP '+result.status);
+    console.error('cash_forecast_periods 更新失敗',result);
+    showNotify('儲存失敗：'+msg,'error');
+    return;
+  }
+  const p=CACHE.cfPeriods.find(x=>x.id===periodId); if(p) p.arRatio=ratio;
+  await cfRecomputeARAmounts(currentCFMonthId);
+  renderCFGrid(currentCFMonthId);
+}
+// 依原始 Excel 檔案的固定比例，套用到目前月份的期別（依「一鍵產生」樣板順序：第3/5/7/9/11個非合計期別）
+const CF_DEFAULT_RATIO_BY_POSITION={2:0.3,4:0.2,6:0.2,8:0.15,10:0.15}; // 0-based index
+async function cfApplyDefaultARRatios(){
+  if(!currentCFMonthId) return;
+  const normalPeriods=cfPeriodsForMonth(currentCFMonthId).filter(p=>!p.isTotal);
+  if(!normalPeriods.length){showNotify('此月份尚無期別','error');return;}
+  if(normalPeriods.length!==11){
+    if(!confirm(`目前期別數量為 ${normalPeriods.length} 個，與原始樣板的 11 個期別不同，套用結果可能對不上。是否仍要依「第3、5、7、9、11個期別」套用比例 0.3/0.2/0.2/0.15/0.15？`)) return;
+  }
+  let failCount=0,successCount=0,lastErr=null;
+  for(const idx of Object.keys(CF_DEFAULT_RATIO_BY_POSITION)){
+    const p=normalPeriods[Number(idx)];
+    if(!p) continue;
+    const ratio=CF_DEFAULT_RATIO_BY_POSITION[idx];
+    const result=await sbUpdateDebug('cash_forecast_periods',p.id,{ar_ratio:ratio});
+    if(result.ok){ p.arRatio=ratio; successCount++; }
+    else{ failCount++; lastErr=result; console.error('cash_forecast_periods 更新失敗',p.id,result); }
+  }
+  await cfRecomputeARAmounts(currentCFMonthId);
+  renderCFGrid(currentCFMonthId);
+  if(failCount>0){
+    const msg=lastErr?.error?.message||lastErr?.error?.hint||('HTTP '+lastErr?.status);
+    showNotify(`套用比例失敗 ${failCount} 筆（成功 ${successCount} 筆）：${msg}`,'error');
+  }else{
+    showNotify('已套用原始檔案固定比例 ✓（如有需要仍可個別修正）','success');
+  }
+}
+async function cfSaveValue(inputEl,periodId,categoryId){
+  const amount=Number(inputEl.value||0);
+  const ok=await cfUpsertValue(periodId,categoryId,amount);
+  if(ok){ renderCFGrid(currentCFMonthId); } else { showNotify('儲存失敗','error'); }
+}
+async function cfSaveBankValue(inputEl,periodId,accountName){
+  const amount=Number(inputEl.value||0);
+  const existing=CACHE.cfBankBalance.find(v=>v.periodId===periodId&&v.accountName===accountName);
+  let ok;
+  if(existing){
+    ok=await sbUpdate('cash_forecast_bank_balance',existing.id,{amount});
+    if(ok) existing.amount=amount;
+  }else{
+    const newId=pid();
+    ok=await sbInsert('cash_forecast_bank_balance',{id:newId,month_id:currentCFMonthId,period_id:periodId,account_name:accountName,amount});
+    if(ok) CACHE.cfBankBalance.push({id:newId,monthId:currentCFMonthId,periodId,accountName,amount});
+  }
+  if(ok){ renderCFGrid(currentCFMonthId); } else { showNotify('儲存失敗','error'); }
+}
+
+const TABLE_CACHE_KEY={login_logs:'loginLogs',petty_cash_records:'pettyCashRecords',petty_cash_counts:'pettyCashCounts',cash_forecast_months:'cfMonths',cash_forecast_periods:'cfPeriods',cash_forecast_values:'cfValues',cash_forecast_bank_balance:'cfBankBalance'};
 async function deleteRecord(table,id,cb){
   if(!confirm('確定要刪除此筆紀錄？'))return;
   const ok=await sbDelete(table,id);
