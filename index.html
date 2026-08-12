@@ -204,6 +204,7 @@
         <div class="nav-item" onclick="showSection('kpi',this)"><span class="icon">🎯</span>月度 KPI</div>
         <div class="nav-item" onclick="showSection('schedule',this)"><span class="icon">🗓️</span>排休月曆</div>
         <div class="nav-item" onclick="showSection('personal',this)"><span class="icon">📆</span>個人行事曆</div>
+        <div class="nav-item" onclick="showSection('pettycash',this)"><span class="icon">💰</span>零用金紀錄</div>
       </div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
@@ -537,6 +538,31 @@
           <div class="table-wrap"><table>
             <thead><tr><th>成員</th><th>假別/類型</th><th>開始</th><th>結束</th><th>備註</th><th>操作</th></tr></thead>
             <tbody id="sch-list-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- 零用金紀錄表 -->
+      <div class="section" id="sec-pettycash">
+        <div class="page-header">
+          <div><div class="page-title">零用金紀錄表</div><div class="page-subtitle">每日零用金收支與餘額紀錄，並可登記實點盤點結果</div></div>
+          <button class="btn btn-primary" onclick="openPettyCashModal()">＋ 新增每日紀錄</button>
+        </div>
+
+        <div class="filter-bar">
+          <div class="form-group"><label>月份</label><input type="month" id="pc-filter-month" onchange="renderPettyCashTable()"></div>
+          <button class="btn btn-outline btn-sm" onclick="clearPettyCashFilter()">清除篩選</button>
+          <div class="form-group"><label>對帳期間（前月26日～當月25日）</label><input type="month" id="pc-export-month"></div>
+          <button class="btn btn-gold btn-sm" onclick="exportPettyCashPDF()">⬇ 匯出期間報表留底</button>
+        </div>
+
+        <div class="summary-row" id="pettycash-summary"></div>
+
+        <div class="card">
+          <div class="card-title">💰 零用金每日紀錄</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>日期</th><th>星期</th><th>前日餘額</th><th>收入</th><th>支出</th><th>本日餘額</th><th>實點金額</th><th>差異</th><th>備註</th><th>操作</th></tr></thead>
+            <tbody id="pettycash-table"></tbody>
           </table></div>
         </div>
       </div>
@@ -1040,6 +1066,54 @@
   </div>
 </div>
 
+<!-- MODAL: 零用金每日紀錄 -->
+<div class="modal-overlay" id="modal-pettycash">
+  <div class="modal" style="width:520px">
+    <div class="modal-title" id="pc-modal-title">💰 新增每日零用金紀錄</div>
+    <input type="hidden" id="pc-edit-id">
+    <div class="form-row cols2">
+      <div class="form-group"><label>日期</label><input type="date" id="pc-date" onchange="pcAutoFillPrevBalance()"></div>
+      <div class="form-group"><label>前日餘額</label><input type="number" id="pc-prev-balance" step="1"></div>
+    </div>
+    <div class="form-row cols2">
+      <div class="form-group"><label>收入</label><input type="number" id="pc-income" step="1" value="0" oninput="pcUpdatePreview()"></div>
+      <div class="form-group"><label>支出</label><input type="number" id="pc-expense" step="1" value="0" oninput="pcUpdatePreview()"></div>
+    </div>
+    <div style="padding:10px 14px;background:var(--gray-100);border-radius:var(--radius);font-size:13px;margin-bottom:16px">
+      本日餘額（自動計算）：<strong id="pc-balance-preview" style="color:var(--navy)">0</strong>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>備註</label><input type="text" id="pc-note" placeholder="選填"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-pettycash')">取消</button>
+      <button class="btn btn-primary" onclick="savePettyCash()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 零用金實點盤點 -->
+<div class="modal-overlay" id="modal-pettycash-count">
+  <div class="modal" style="width:480px">
+    <div class="modal-title">🧮 實點零用金盤點</div>
+    <input type="hidden" id="pcc-record-id">
+    <div class="form-group" style="margin-bottom:14px"><label>盤點日期</label><input type="date" id="pcc-date" readonly style="background:var(--gray-100)"></div>
+    <div class="table-wrap" style="margin-bottom:14px"><table>
+      <thead><tr><th>面額</th><th>張數</th><th>小計</th></tr></thead>
+      <tbody id="pcc-denom-table"></tbody>
+    </table></div>
+    <div style="padding:10px 14px;background:var(--gray-100);border-radius:var(--radius);font-size:13px;margin-bottom:16px">
+      實點總計：<strong id="pcc-total-preview" style="color:var(--navy)">0</strong>　
+      帳面本日餘額：<strong id="pcc-book-balance">0</strong>　
+      差異：<strong id="pcc-diff-preview">0</strong>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-pettycash-count')">取消</button>
+      <button class="btn btn-primary" onclick="savePettyCashCount()">儲存盤點結果</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 //  SUPABASE 設定
@@ -1064,6 +1138,17 @@ async function sbDelete(table,id){
   const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{method:'DELETE',headers:SB_HDR});
   return r.ok;
 }
+// 除錯用：回傳 {ok, status, error} 而非單純 true/false，方便定位失敗原因
+async function sbInsertDebug(table,data){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:SB_HDR,body:JSON.stringify(data)});
+  let body=null; try{body=await r.json();}catch(e){}
+  return {ok:r.ok,status:r.status,error:body};
+}
+async function sbUpdateDebug(table,id,data){
+  const r=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{method:'PATCH',headers:SB_HDR,body:JSON.stringify(data)});
+  let body=null; try{body=await r.json();}catch(e){}
+  return {ok:r.ok,status:r.status,error:body};
+}
 
 const WR_KEYS=['wr-1','wr-2','wr-3','wr-4','wr-5','wr-6','wr-7','wr-8','wr-9','wr-10','wr-11'];
 const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域','收到客戶寄回之折讓單正航入帳+追蹤表keyin','郵寄帳單','群獅隨貨開立發票','協助其他區域沖帳/核單/核帳','協助其他非例行性工作','特殊狀況處理','其他','異常提報'];
@@ -1071,7 +1156,7 @@ function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 let currentUser=null;
-let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[]};
+let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[]};
 
 // ── LOGIN ──
 async function doLogin(){
@@ -1104,6 +1189,7 @@ async function enterApp(){
   renderPaymentTable();renderWeeklyTable();renderKPITable();loadMailSetting();
   initScheduleForm();
   renderScheduleCalendar();
+  renderPettyCashTable();
   await loadAnnouncement();
   // 登入後顯示今日行程提醒
   setTimeout(()=>showTodayReminder(), 800);
@@ -1131,11 +1217,12 @@ function startAutoRefresh(){
     if(id==='schedule') renderScheduleCalendar();
     if(id==='history') renderHistoryTable();
     if(id==='users') renderUserTable();
+    if(id==='pettycash') renderPettyCashTable();
   }, 30000); // 每30秒更新一次
 }
 
 async function loadAllCache(){
-  const [payments,weeklies,kpis,loginLogs,accounts,schedules,personalSchedules]=await Promise.all([
+  const [payments,weeklies,kpis,loginLogs,accounts,schedules,personalSchedules,pettyCashRecords,pettyCashCounts]=await Promise.all([
     sbGet('payments','order=created_at.desc'),
     sbGet('weeklies','order=created_at.desc'),
     sbGet('kpis','order=created_at.desc'),
@@ -1143,6 +1230,8 @@ async function loadAllCache(){
     sbGet('accounts','order=created.asc'),
     sbGet('schedules','order=start_date.asc'),
     sbGet('personal_schedules','order=date.asc'),
+    sbGet('petty_cash_records','order=record_date.asc'),
+    sbGet('petty_cash_counts','order=count_date.asc'),
   ]);
   CACHE.payments=payments.map(p=>({id:p.id,userId:p.user_id,area:p.area,fillDate:p.fill_date,date:p.date,note:p.note,paymentType:p.payment_type||'monthly',user:p.user,createdAt:p.created_at}));
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
@@ -1151,13 +1240,15 @@ async function loadAllCache(){
   CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||''}));
   CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,startTime:s.start_time||null,endDate:s.end_date,endTime:s.end_time||null,note:s.note,createdAt:s.created_at}));
   CACHE.personalSchedules=personalSchedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,date:s.date,title:s.title,leaveType:s.leave_type,note:s.note,createdAt:s.created_at}));
+  CACHE.pettyCashRecords=pettyCashRecords.map(r=>({id:r.id,recordDate:r.record_date,prevBalance:Number(r.prev_balance||0),income:Number(r.income||0),expense:Number(r.expense||0),balance:Number(r.balance||0),countedAmount:r.counted_amount===null?null:Number(r.counted_amount),difference:r.difference===null?null:Number(r.difference),note:r.note||'',createdBy:r.created_by,updatedAt:r.updated_at}));
+  CACHE.pettyCashCounts=pettyCashCounts.map(c=>({id:c.id,countDate:c.count_date,denomination:Number(c.denomination),quantity:Number(c.quantity||0),subtotal:Number(c.subtotal||0),createdBy:c.created_by}));
 }
 
 async function doLogout(){
   if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; }
   const logs=await sbGet('login_logs',`user_id=eq.${currentUser.id}&logout_at=is.null&limit=1`);
   if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
-  currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[]};
+  currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[]};
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-user').value='';
@@ -1177,6 +1268,7 @@ function showSection(id,el){
   if(id==='dashboard') refreshDash();
   if(id==='schedule'){ initScheduleForm(); renderScheduleCalendar(); }
   if(id==='personal'){ renderPersonalCalendar(); }
+  if(id==='pettycash'){ renderPettyCashTable(); }
   if(id==='changepwd'){
     const acc = CACHE.accounts.find(a=>a.id===currentUser.id);
     const hintEl = document.getElementById('pwd-hint');
@@ -2224,11 +2316,275 @@ async function changePassword(){
 }
 
 // ── 刪除 ──
+// ══════════════════════════════════════════
+//  零用金紀錄表
+// ══════════════════════════════════════════
+const PCC_DENOMS=[1000,500,100,50,10,5,1];
+
+function pcSortedRecords(){
+  // 由舊到新（供計算前日餘額等內部邏輯使用）
+  return [...CACHE.pettyCashRecords].sort((a,b)=>a.recordDate<b.recordDate?-1:1);
+}
+function pcSortedRecordsDesc(){
+  // 由新到舊（供畫面列表顯示，最新日期在最上面）
+  return [...CACHE.pettyCashRecords].sort((a,b)=>a.recordDate<b.recordDate?1:-1);
+}
+function pcWeekday(dateStr){
+  if(!dateStr) return '—';
+  const d=new Date(dateStr+'T00:00:00');
+  return ['日','一','二','三','四','五','六'][d.getDay()];
+}
+
+function openPettyCashModal(editId){
+  document.getElementById('pc-edit-id').value='';
+  document.getElementById('pc-modal-title').textContent='💰 新增每日零用金紀錄';
+  if(editId){
+    const r=CACHE.pettyCashRecords.find(x=>x.id===editId);
+    if(!r) return;
+    document.getElementById('pc-edit-id').value=r.id;
+    document.getElementById('pc-modal-title').textContent='💰 編輯零用金紀錄';
+    document.getElementById('pc-date').value=r.recordDate;
+    document.getElementById('pc-prev-balance').value=r.prevBalance;
+    document.getElementById('pc-income').value=r.income;
+    document.getElementById('pc-expense').value=r.expense;
+    document.getElementById('pc-note').value=r.note||'';
+  }else{
+    const today=new Date().toISOString().split('T')[0];
+    document.getElementById('pc-date').value=today;
+    document.getElementById('pc-income').value=0;
+    document.getElementById('pc-expense').value=0;
+    document.getElementById('pc-note').value='';
+    pcAutoFillPrevBalance();
+  }
+  pcUpdatePreview();
+  document.getElementById('modal-pettycash').classList.add('open');
+}
+
+// 依日期自動帶入「前一天的本日餘額」作為前日餘額（找不到則留給使用者手動輸入）
+function pcAutoFillPrevBalance(){
+  const date=document.getElementById('pc-date').value;
+  if(!date) return;
+  const prior=pcSortedRecords().filter(r=>r.recordDate<date).pop();
+  document.getElementById('pc-prev-balance').value = prior ? prior.balance : (document.getElementById('pc-prev-balance').value||0);
+  pcUpdatePreview();
+}
+function pcUpdatePreview(){
+  const prev=Number(document.getElementById('pc-prev-balance').value||0);
+  const income=Number(document.getElementById('pc-income').value||0);
+  const expense=Number(document.getElementById('pc-expense').value||0);
+  document.getElementById('pc-balance-preview').textContent=(prev+income-expense).toLocaleString();
+}
+
+async function savePettyCash(){
+  const id=document.getElementById('pc-edit-id').value;
+  const recordDate=document.getElementById('pc-date').value;
+  if(!recordDate){showNotify('請選擇日期','error');return;}
+  const prevBalance=Number(document.getElementById('pc-prev-balance').value||0);
+  const income=Number(document.getElementById('pc-income').value||0);
+  const expense=Number(document.getElementById('pc-expense').value||0);
+  const balance=prevBalance+income-expense;
+  const note=document.getElementById('pc-note').value.trim();
+  const existing=CACHE.pettyCashRecords.find(r=>r.recordDate===recordDate && r.id!==id);
+  if(existing){showNotify('該日期已有紀錄，請直接編輯該筆','error');return;}
+
+  const payload={record_date:recordDate,prev_balance:prevBalance,income,expense,balance,note,created_by:currentUser.name,updated_at:nowStr()};
+  let result;
+  if(id){
+    result=await sbUpdateDebug('petty_cash_records',id,payload);
+  }else{
+    result=await sbInsertDebug('petty_cash_records',{id:pid(),...payload});
+  }
+  if(result.ok){
+    closeModal('modal-pettycash');
+    await loadAllCache();
+    renderPettyCashTable();
+    showNotify('零用金紀錄已儲存 ✓','success');
+  }else{
+    const msg=result.error?.message||result.error?.hint||result.error?.code||('HTTP '+result.status);
+    console.error('petty_cash_records 儲存失敗',result);
+    showNotify('儲存失敗：'+msg,'error');
+  }
+}
+
+function openPettyCashCount(recordId){
+  const r=CACHE.pettyCashRecords.find(x=>x.id===recordId);
+  if(!r) return;
+  document.getElementById('pcc-record-id').value=recordId;
+  document.getElementById('pcc-date').value=r.recordDate;
+  document.getElementById('pcc-book-balance').textContent=r.balance.toLocaleString();
+  const existing=CACHE.pettyCashCounts.filter(c=>c.countDate===r.recordDate);
+  const tb=document.getElementById('pcc-denom-table');
+  tb.innerHTML=PCC_DENOMS.map(d=>{
+    const found=existing.find(c=>c.denomination===d);
+    const qty=found?found.quantity:0;
+    return `<tr><td>${d>=100?'$'+d:d+'元'}</td>
+      <td><input type="number" min="0" style="width:90px" id="pcc-qty-${d}" value="${qty}" oninput="pccUpdatePreview()"></td>
+      <td id="pcc-sub-${d}">${(d*qty).toLocaleString()}</td></tr>`;
+  }).join('');
+  pccUpdatePreview();
+  document.getElementById('modal-pettycash-count').classList.add('open');
+}
+function pccUpdatePreview(){
+  const recordId=document.getElementById('pcc-record-id').value;
+  const r=CACHE.pettyCashRecords.find(x=>x.id===recordId);
+  let total=0;
+  PCC_DENOMS.forEach(d=>{
+    const qty=Number(document.getElementById('pcc-qty-'+d).value||0);
+    const sub=d*qty;
+    document.getElementById('pcc-sub-'+d).textContent=sub.toLocaleString();
+    total+=sub;
+  });
+  document.getElementById('pcc-total-preview').textContent=total.toLocaleString();
+  const book=r?r.balance:0;
+  const diff=total-book;
+  const diffEl=document.getElementById('pcc-diff-preview');
+  diffEl.textContent=diff.toLocaleString();
+  diffEl.style.color=diff===0?'var(--green)':'var(--red)';
+}
+async function savePettyCashCount(){
+  const recordId=document.getElementById('pcc-record-id').value;
+  const countDate=document.getElementById('pcc-date').value;
+  const r=CACHE.pettyCashRecords.find(x=>x.id===recordId);
+  if(!r) return;
+  let total=0;
+  const rows=PCC_DENOMS.map(d=>{
+    const qty=Number(document.getElementById('pcc-qty-'+d).value||0);
+    const subtotal=d*qty;
+    total+=subtotal;
+    return {id:pid(),count_date:countDate,denomination:d,quantity:qty,subtotal,created_by:currentUser.name};
+  });
+  // 先刪除當日舊的盤點紀錄，再寫入新的（避免重複）
+  const oldCounts=CACHE.pettyCashCounts.filter(c=>c.countDate===countDate);
+  for(const c of oldCounts){ await sbDelete('petty_cash_counts',c.id); }
+  for(const row of rows){ if(row.quantity>0) await sbInsert('petty_cash_counts',row); }
+  const difference=total-r.balance;
+  const ok=await sbUpdate('petty_cash_records',r.id,{counted_amount:total,difference});
+  if(ok){
+    closeModal('modal-pettycash-count');
+    await loadAllCache();
+    renderPettyCashTable();
+    showNotify('盤點結果已儲存 ✓','success');
+  }else{showNotify('儲存失敗','error');}
+}
+
+function clearPettyCashFilter(){
+  document.getElementById('pc-filter-month').value='';
+  renderPettyCashTable();
+}
+
+// 對帳期間：前月26日 ～ 當月25日（monthStr 為期間結束所在月份，例如 '2026-07' → 2026/06/26~2026/07/25）
+function pcPeriodRange(monthStr){
+  const [y,m]=monthStr.split('-').map(Number);
+  const end=new Date(y,m-1,25);
+  const start=new Date(y,m-2,26);
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return {start:fmt(start),end:fmt(end),label:`${fmt(start)} ～ ${fmt(end)}`};
+}
+
+function exportPettyCashPDF(){
+  let monthVal=document.getElementById('pc-export-month').value;
+  if(!monthVal){
+    const today=new Date();
+    monthVal=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  }
+  const {start,end,label}=pcPeriodRange(monthVal);
+  const list=pcSortedRecords().filter(r=>r.recordDate>=start && r.recordDate<=end);
+  if(!list.length){showNotify('此期間內尚無零用金紀錄','error');return;}
+
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF('p','mm','a4');
+  const PAGE_W=210,MARGIN=10,TABLE_W=PAGE_W-MARGIN*2;
+  const HDR_H=10,ROW_H=8,FS_BODY=8.5;
+  let y=12;
+  pdfText(doc,'展晟財會部',MARGIN,y,TABLE_W,10,{fs:14,bold:false,color:'#C8962B',align:'center'});y+=10;
+  pdfText(doc,'零用金對帳報表',MARGIN,y,TABLE_W,16,{fs:PDF_FS_TITLE,bold:true,color:'#8B1A1A',align:'center'});y+=16;
+  doc.setDrawColor(200,150,43);doc.setLineWidth(0.8);doc.line(MARGIN+20,y,PAGE_W-MARGIN-20,y);doc.setLineWidth(0.2);y+=6;
+  pdfText(doc,`對帳期間：${label}　　列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=9;
+
+  const cols=[
+    {x:MARGIN,w:22,label:'日期',key:'recordDate'},
+    {x:MARGIN+22,w:12,label:'星期'},
+    {x:MARGIN+34,w:24,label:'前日餘額'},
+    {x:MARGIN+58,w:22,label:'收入'},
+    {x:MARGIN+80,w:22,label:'支出'},
+    {x:MARGIN+102,w:24,label:'本日餘額'},
+    {x:MARGIN+126,w:24,label:'實點金額'},
+    {x:MARGIN+150,w:20,label:'差異'},
+    {x:MARGIN+170,w:20,label:'備註'},
+  ];
+  doc.setFillColor(139,26,26);doc.rect(MARGIN,y,TABLE_W,HDR_H,'F');
+  cols.forEach(c=>{pdfText(doc,c.label,c.x+0.5,y+0.5,c.w-1,HDR_H-1,{fs:9,bold:true,color:'#ffffff',align:'center'});});
+  y+=HDR_H;
+
+  const PAGE_H=297,BOTTOM=280;
+  let totalIncome=0,totalExpense=0;
+  list.forEach((r,i)=>{
+    if(y>BOTTOM){doc.addPage();y=14;}
+    totalIncome+=r.income;totalExpense+=r.expense;
+    const bg=i%2===0?[255,245,245]:[255,255,255];
+    doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(MARGIN,y,TABLE_W,ROW_H,'F');
+    doc.setDrawColor(210,208,215);doc.rect(MARGIN,y,TABLE_W,ROW_H);
+    const diffColor=(r.difference!==null && r.difference!==0)?'#b83232':'#222';
+    pdfText(doc,r.recordDate,cols[0].x+0.5,y+0.5,cols[0].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    pdfText(doc,pcWeekday(r.recordDate),cols[1].x+0.5,y+0.5,cols[1].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    pdfText(doc,r.prevBalance.toLocaleString(),cols[2].x+0.5,y+0.5,cols[2].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    pdfText(doc,r.income?r.income.toLocaleString():'—',cols[3].x+0.5,y+0.5,cols[3].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    pdfText(doc,r.expense?r.expense.toLocaleString():'—',cols[4].x+0.5,y+0.5,cols[4].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    pdfText(doc,r.balance.toLocaleString(),cols[5].x+0.5,y+0.5,cols[5].w-1,ROW_H-1,{fs:FS_BODY,align:'center',bold:true});
+    pdfText(doc,r.countedAmount!==null?r.countedAmount.toLocaleString():'—',cols[6].x+0.5,y+0.5,cols[6].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    pdfText(doc,r.difference!==null?r.difference.toLocaleString():'—',cols[7].x+0.5,y+0.5,cols[7].w-1,ROW_H-1,{fs:FS_BODY,align:'center',color:diffColor,bold:r.difference!==null&&r.difference!==0});
+    pdfText(doc,(r.note||'—').slice(0,10),cols[8].x+0.5,y+0.5,cols[8].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
+    y+=ROW_H;
+  });
+  y+=4;
+  if(y>BOTTOM){doc.addPage();y=14;}
+  pdfText(doc,`期間收入合計：${totalIncome.toLocaleString()}　　期間支出合計：${totalExpense.toLocaleString()}　　期末餘額：${list[list.length-1].balance.toLocaleString()}`,MARGIN,y,TABLE_W,6,{fs:10,bold:true,color:'#8B1A1A'});
+  y+=10;
+  pdfText(doc,`製表人：${currentUser.name}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});
+  doc.save(`零用金對帳報表_${start}_${end}.pdf`);
+  showNotify('對帳報表 PDF 已下載','success');
+}
+
+function renderPettyCashTable(){
+  const month=document.getElementById('pc-filter-month')?.value;
+  let list=pcSortedRecordsDesc();
+  if(month) list=list.filter(r=>r.recordDate.startsWith(month));
+
+  const totalIncome=list.reduce((s,r)=>s+r.income,0);
+  const totalExpense=list.reduce((s,r)=>s+r.expense,0);
+  const latestBalance=list.length?list[0].balance:0;
+  const diffCount=list.filter(r=>r.difference!==null && r.difference!==0).length;
+  document.getElementById('pettycash-summary').innerHTML=`
+    <div class="summary-item"><div class="s-label">目前餘額</div><div class="s-value">${latestBalance.toLocaleString()}</div></div>
+    <div class="summary-item done"><div class="s-label">期間收入合計</div><div class="s-value">${totalIncome.toLocaleString()}</div></div>
+    <div class="summary-item missing"><div class="s-label">期間支出合計</div><div class="s-value">${totalExpense.toLocaleString()}</div></div>
+    <div class="summary-item ${diffCount?'missing':'done'}"><div class="s-label">盤點有差異筆數</div><div class="s-value">${diffCount}</div></div>`;
+
+  const tb=document.getElementById('pettycash-table');
+  tb.innerHTML=list.length?list.map(r=>`<tr>
+    <td>${r.recordDate}</td>
+    <td>${pcWeekday(r.recordDate)}</td>
+    <td>${r.prevBalance.toLocaleString()}</td>
+    <td>${r.income?('<span class="badge badge-green">+'+r.income.toLocaleString()+'</span>'):'—'}</td>
+    <td>${r.expense?('<span class="badge badge-red">-'+r.expense.toLocaleString()+'</span>'):'—'}</td>
+    <td><strong>${r.balance.toLocaleString()}</strong></td>
+    <td>${r.countedAmount!==null?r.countedAmount.toLocaleString():'<span style="color:var(--gray-400)">未盤點</span>'}</td>
+    <td>${r.difference!==null?`<span class="badge ${r.difference===0?'badge-green':'badge-red'}">${r.difference.toLocaleString()}</span>`:'—'}</td>
+    <td>${r.note?`<span class="badge badge-orange">${r.note}</span>`:'<span style="color:var(--gray-400)">—</span>'}</td>
+    <td>
+      <button class="btn btn-sm btn-outline" onclick="openPettyCashModal('${r.id}')">編輯</button>
+      <button class="btn btn-sm btn-gold" onclick="openPettyCashCount('${r.id}')">盤點</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteRecord('petty_cash_records','${r.id}',renderPettyCashTable)">刪除</button>
+    </td>
+  </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--gray-400);padding:30px">尚無零用金紀錄</td></tr>';
+}
+
+const TABLE_CACHE_KEY={login_logs:'loginLogs',petty_cash_records:'pettyCashRecords',petty_cash_counts:'pettyCashCounts'};
 async function deleteRecord(table,id,cb){
   if(!confirm('確定要刪除此筆紀錄？'))return;
   const ok=await sbDelete(table,id);
   if(ok){
-    const cacheKey=table==='login_logs'?'loginLogs':table;
+    const cacheKey=TABLE_CACHE_KEY[table]||table;
     CACHE[cacheKey]=CACHE[cacheKey].filter(r=>r.id!==id);
     cb();refreshDash();
   }else{showNotify('刪除失敗','error');}
