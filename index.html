@@ -297,8 +297,8 @@
               <option>5A</option><option>5B</option><option>5C</option><option>5D</option><option>5E</option><option>5F</option><option>5G</option><option>5S</option>
             </select>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="clearPaymentFilter()">清除篩選</button>
-          <button class="btn btn-gold btn-sm" onclick="exportPaymentPDF()">⬇ 匯出 PDF</button>
+          <button class="btn btn-outline btn-sm btn-view-safe" onclick="clearPaymentFilter()">清除篩選</button>
+          <button class="btn btn-gold btn-sm btn-view-safe" onclick="exportPaymentPDF()">⬇ 匯出 PDF</button>
         </div>
         <div class="summary-row" id="payment-summary"></div>
         <div class="card">
@@ -322,7 +322,7 @@
             <select id="filter-weekly-user" onchange="renderWeeklyTable()"><option value="">全部人員</option></select>
           </div>
           <button class="btn btn-outline btn-sm" onclick="clearWeeklyFilter()">清除</button>
-          <button class="btn btn-gold btn-sm" onclick="exportWeeklyPDF()">⬇ 匯出 PDF</button>
+          <button class="btn btn-gold btn-sm btn-view-safe" onclick="exportWeeklyPDF()">⬇ 匯出 PDF</button>
           <button class="btn btn-green btn-sm" onclick="sendWeeklyMail()">✉ 寄給部門主管</button>
         </div>
         <div class="card">
@@ -346,7 +346,7 @@
             <select id="filter-kpi-user" onchange="renderKPITable()"><option value="">全部人員</option></select>
           </div>
           <button class="btn btn-outline btn-sm" onclick="clearKPIFilter()">清除</button>
-          <button class="btn btn-gold btn-sm" onclick="exportKPIPDF()">⬇ 匯出 PDF</button>
+          <button class="btn btn-gold btn-sm btn-view-safe" onclick="exportKPIPDF()">⬇ 匯出 PDF</button>
           <button class="btn btn-green btn-sm" onclick="sendKPIMail()">✉ 寄給部門主管</button>
         </div>
         <div class="card">
@@ -515,7 +515,7 @@
       <div class="section" id="sec-schedule">
         <div class="page-header">
           <div><div class="page-title">部門排休月曆</div><div class="page-subtitle">點擊日期格子即可新增排休，點擊排休標籤可編輯</div></div>
-          <button class="btn btn-gold btn-sm" onclick="exportSchedulePDF()">⬇ 匯出圖檔</button>
+          <button class="btn btn-gold btn-sm btn-view-safe" onclick="exportSchedulePDF()">⬇ 匯出圖檔</button>
         </div>
 
         <!-- 顏色配置（移至最上層） -->
@@ -564,9 +564,9 @@
 
         <div class="filter-bar">
           <div class="form-group"><label>月份</label><input type="month" id="pc-filter-month" onchange="renderPettyCashTable()"></div>
-          <button class="btn btn-outline btn-sm" onclick="clearPettyCashFilter()">清除篩選</button>
+          <button class="btn btn-outline btn-sm btn-view-safe" onclick="clearPettyCashFilter()">清除篩選</button>
           <div class="form-group"><label>對帳期間（前月26日～當月25日）</label><input type="month" id="pc-export-month"></div>
-          <button class="btn btn-gold btn-sm" onclick="exportPettyCashPDF()">⬇ 匯出期間報表留底</button>
+          <button class="btn btn-gold btn-sm btn-view-safe" onclick="exportPettyCashPDF()">⬇ 匯出期間報表留底</button>
         </div>
 
         <div class="summary-row" id="pettycash-summary"></div>
@@ -1304,6 +1304,7 @@ function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 let currentUser=null;
 let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
 let currentCFMonthId=null;
+const ORIGINAL_SECTION_HTML={};
 
 // ── LOGIN ──
 async function doLogin(){
@@ -1329,7 +1330,10 @@ async function enterApp(){
   document.getElementById('topbar-name').textContent=currentUser.name;
   document.getElementById('avatar-initial').textContent=currentUser.name.slice(0,1);
   if(currentUser.role==='admin'){document.querySelectorAll('.admin-only').forEach(el=>el.style.display='flex');}
-  applyPermissionVisibility();
+  if(!window.ORIGINAL_SECTION_HTML_CAPTURED){
+    PERMISSION_SECTIONS.forEach(s=>{ const el=document.getElementById('sec-'+s.key); if(el) ORIGINAL_SECTION_HTML[s.key]=el.innerHTML; });
+    window.ORIGINAL_SECTION_HTML_CAPTURED=true;
+  }
   showNotify('資料載入中...','');
   await loadAllCache();
   showNotify('載入完成 ✓','success');
@@ -1339,6 +1343,7 @@ async function enterApp(){
   renderScheduleCalendar();
   renderPettyCashTable();
   await loadAnnouncement();
+  PERMISSION_SECTIONS.forEach(s=>{ setupReadOnlyObserver(s.key); applyReadOnlyLock(s.key); });
   // 登入後顯示今日行程提醒
   setTimeout(()=>showTodayReminder(), 800);
   document.getElementById('dash-date').textContent=new Date().toLocaleDateString('zh-TW',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -1407,6 +1412,9 @@ async function doLogout(){
   const logs=await sbGet('login_logs',`user_id=eq.${currentUser.id}&logout_at=is.null&limit=1`);
   if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
   currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
+  Object.keys(READONLY_OBSERVERS).forEach(k=>{ READONLY_OBSERVERS[k].disconnect(); delete READONLY_OBSERVERS[k]; });
+  PERMISSION_SECTIONS.forEach(s=>restoreSectionUIIfLocked(s.key));
+  LOCKED_SECTIONS.clear();
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-user').value='';
@@ -1417,7 +1425,15 @@ async function doLogout(){
 
 // ── NAV ──
 function showSection(id,el){
-  if(!hasPerm(id)){ showNotify('您沒有此功能的使用權限，請聯絡管理員','error'); return; }
+  if(!canView(id)){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('sec-'+id).classList.add('active');
+    el.classList.add('active');
+    lockSectionUI(id);
+    return;
+  }
+  restoreSectionUIIfLocked(id);
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
@@ -1434,6 +1450,8 @@ function showSection(id,el){
     const hintEl = document.getElementById('pwd-hint');
     if(hintEl && acc) hintEl.placeholder = acc.hint ? `目前提示：${acc.hint}` : '例：我的生日、寵物名字…';
   }
+  setupReadOnlyObserver(id);
+  applyReadOnlyLock(id);
 }
 
 // ── DASHBOARD ──
@@ -1729,18 +1747,29 @@ const PERMISSION_SECTIONS=[
   {key:'pettycash',label:'零用金紀錄'},
   {key:'cashforecast',label:'資金預估表'},
 ];
-function permCheckboxesHtml(idPrefix,checkedKeys){
+const PERM_LEVEL_LABELS={edit:'可編輯可瀏覽',view:'僅可瀏覽',none:'不可編輯不可瀏覽'};
+function permSelectHtml(idPrefix,permMap){
   return PERMISSION_SECTIONS.map(s=>{
-    const checked=checkedKeys.includes(s.key)?'checked':'';
-    return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;font-weight:400">
-      <input type="checkbox" id="${idPrefix}-${s.key}" ${checked} style="width:auto"> ${s.label}
-    </label>`;
+    const level=(permMap && permMap[s.key]) || 'edit';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--gray-200)">
+      <span style="font-size:13px">${s.label}</span>
+      <select id="${idPrefix}-${s.key}" style="width:170px;font-size:12.5px;padding:5px 6px">
+        <option value="edit" ${level==='edit'?'selected':''}>可編輯可瀏覽</option>
+        <option value="view" ${level==='view'?'selected':''}>僅可瀏覽</option>
+        <option value="none" ${level==='none'?'selected':''}>不可編輯不可瀏覽</option>
+      </select>
+    </div>`;
   }).join('');
+}
+function collectPermSelects(idPrefix){
+  const permissions={};
+  PERMISSION_SECTIONS.forEach(s=>{ permissions[s.key]=document.getElementById(idPrefix+'-'+s.key).value; });
+  return permissions;
 }
 function openAddUserModal(){
   ['au-name','au-username','au-pass','au-hint'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('au-role').value='user';
-  document.getElementById('au-perm-checks').innerHTML=permCheckboxesHtml('au',PERMISSION_SECTIONS.map(s=>s.key));
+  document.getElementById('au-perm-checks').innerHTML=permSelectHtml('au',null);
   document.getElementById('modal-adduser').classList.add('open');
 }
 async function saveUser(){
@@ -1751,7 +1780,7 @@ async function saveUser(){
   const hint=document.getElementById('au-hint').value.trim();
   if(!name||!username||!password){showNotify('請填寫完整資料','error');return;}
   if(CACHE.accounts.find(a=>a.username===username)){showNotify('帳號已存在','error');return;}
-  const permissions=PERMISSION_SECTIONS.filter(s=>document.getElementById('au-'+s.key).checked).map(s=>s.key);
+  const permissions=collectPermSelects('au');
   const rec={id:pid(),name,username,password,role,hint,active:true,created:nowStr(),permissions};
   const ok=await sbInsert('accounts',rec);
   if(ok){
@@ -1813,8 +1842,14 @@ async function adminResetPassword(){
 function renderUserTable(){
   const accounts=CACHE.accounts;
   document.getElementById('user-table').innerHTML=accounts.map(a=>{
-    const permLabel = a.role==='admin' ? '全部（管理員）' : `${(a.permissions||[]).length} / ${PERMISSION_SECTIONS.length} 項`;
-    return `<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td>${permLabel}</td><td>${a.created}</td><td>
+    let permLabel='全部（管理員）';
+    if(a.role!=='admin'){
+      const pm=a.permissions||{};
+      const counts={edit:0,view:0,none:0};
+      PERMISSION_SECTIONS.forEach(s=>{ const lvl=pm[s.key]||'edit'; counts[lvl]++; });
+      permLabel = counts.none>0 ? `${counts.edit}可編輯／${counts.view}僅瀏覽／${counts.none}無權限` : (counts.view>0?`${counts.edit}可編輯／${counts.view}僅瀏覽`:'全部可編輯');
+    }
+    return `<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td style="font-size:12px">${permLabel}</td><td>${a.created}</td><td>
       <button class="btn btn-sm btn-outline" onclick="toggleUserActive('${a.id}',${!a.active})">${a.active?'停用':'啟用'}</button>
       ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditPermModal('${a.id}')">權限</button>`:''}
     </td></tr>`;
@@ -1825,35 +1860,74 @@ function openEditPermModal(userId){
   if(!acc) return;
   document.getElementById('ep-user-id').value=userId;
   document.getElementById('ep-title').textContent=`🔐 編輯權限：${acc.name}`;
-  document.getElementById('ep-perm-checks').innerHTML=permCheckboxesHtml('ep',acc.permissions||PERMISSION_SECTIONS.map(s=>s.key));
+  document.getElementById('ep-perm-checks').innerHTML=permSelectHtml('ep',acc.permissions);
   document.getElementById('modal-edit-perm').classList.add('open');
 }
 async function saveUserPermissions(){
   const userId=document.getElementById('ep-user-id').value;
-  const permissions=PERMISSION_SECTIONS.filter(s=>document.getElementById('ep-'+s.key).checked).map(s=>s.key);
+  const permissions=collectPermSelects('ep');
   const ok=await sbUpdate('accounts',userId,{permissions});
   if(ok){
     const acc=CACHE.accounts.find(a=>a.id===userId);
     if(acc) acc.permissions=permissions;
-    if(currentUser && currentUser.id===userId){ currentUser.permissions=permissions; applyPermissionVisibility(); }
+    if(currentUser && currentUser.id===userId){ currentUser.permissions=permissions; }
     closeModal('modal-edit-perm');
     renderUserTable();
     showNotify('權限已更新 ✓','success');
   }else{showNotify('儲存失敗','error');}
 }
-function hasPerm(section){
-  if(!currentUser) return false;
-  if(currentUser.role==='admin') return true;
+// 回傳該功能對目前使用者的權限等級：'edit'｜'view'｜'none'
+function permLevel(section){
+  if(!currentUser) return 'none';
+  if(currentUser.role==='admin') return 'edit';
   const gated=PERMISSION_SECTIONS.some(s=>s.key===section);
-  if(!gated) return true; // 非權限管控的功能（如首頁、個人行事曆、帳號管理等）一律可存取
-  if(!currentUser.permissions) return true; // 舊帳號未設定 = 預設全部開放，避免既有人員權限突然被鎖住
-  return currentUser.permissions.includes(section);
+  if(!gated) return 'edit'; // 非權限管控的功能（首頁、個人行事曆、帳號管理等）一律可編輯瀏覽
+  const pm=currentUser.permissions;
+  if(!pm) return 'edit'; // 舊帳號未設定 = 預設全部開放，避免既有人員權限突然被鎖住
+  return pm[section] || 'edit';
 }
-function applyPermissionVisibility(){
-  PERMISSION_SECTIONS.forEach(s=>{
-    const el=document.getElementById('nav-'+s.key);
-    if(el) el.style.display=hasPerm(s.key)?'flex':'none';
+function canView(section){ return permLevel(section)!=='none'; }
+function canEdit(section){ return permLevel(section)==='edit'; }
+
+const READONLY_OBSERVERS={};
+const LOCKED_SECTIONS=new Set();
+function lockSectionUI(id){
+  const container=document.getElementById('sec-'+id);
+  if(!container) return;
+  LOCKED_SECTIONS.add(id);
+  container.innerHTML=`<div style="padding:70px 20px;text-align:center;color:var(--gray-400)">
+    <div style="font-size:42px">🔒</div>
+    <div style="margin-top:14px;font-size:15px;color:var(--gray-600)">您沒有此功能的瀏覽權限</div>
+    <div style="font-size:13px;margin-top:4px">如需使用請聯絡管理員開通權限</div>
+  </div>`;
+}
+function restoreSectionUIIfLocked(id){
+  if(LOCKED_SECTIONS.has(id) && ORIGINAL_SECTION_HTML[id]){
+    document.getElementById('sec-'+id).innerHTML=ORIGINAL_SECTION_HTML[id];
+    LOCKED_SECTIONS.delete(id);
+  }
+}
+function applyReadOnlyLock(id){
+  const container=document.getElementById('sec-'+id);
+  if(!container) return;
+  if(permLevel(id)!=='view') return;
+  container.querySelectorAll('input,select,textarea').forEach(el=>{
+    if(el.closest('.filter-bar')) return; // 篩選/月份選擇屬於瀏覽功能，不鎖定
+    if(!el.disabled) el.disabled=true;
   });
+  container.querySelectorAll('button').forEach(btn=>{
+    if(btn.classList.contains('btn-view-safe')) return;
+    if(btn.closest('.filter-bar')) return;
+    if(!btn.disabled) btn.disabled=true;
+  });
+}
+function setupReadOnlyObserver(id){
+  if(READONLY_OBSERVERS[id]) return;
+  const container=document.getElementById('sec-'+id);
+  if(!container) return;
+  const observer=new MutationObserver(()=>{ applyReadOnlyLock(id); });
+  observer.observe(container,{childList:true,subtree:true});
+  READONLY_OBSERVERS[id]=observer;
 }
 async function toggleUserActive(id,active){
   const ok=await sbUpdate('accounts',id,{active});
