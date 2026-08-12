@@ -1301,6 +1301,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
+console.log('財會工作進度小幫手 build: 2026-08-12-permfix-v2（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
 let currentCFMonthId=null;
