@@ -2310,8 +2310,8 @@ async function renderScheduleCalendar(){
     const isToday = dateStr===today;
     const isWeekend = dow===0||dow===6;
     const holiday = holidayMap[dateStr];
-    const isTwHoliday = holiday && holiday.isHoliday;
-    const isMakeupWorkday = holiday && !holiday.isHoliday && holiday.description; // 補行上班（原為假日但需上班）
+    const isTwHoliday = holiday && holiday.isHoliday && !isWeekend; // 週休二日本身已標示，國定假日只在平日才需要額外提示
+    const isMakeupWorkday = holiday && !holiday.isHoliday && holiday.description; // 補行上班／補課（不論平日或假日都要標示，因為這代表原本該休的日子要上班）
 
     let bg = isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff';
     if(isTwHoliday) bg = isToday?'#fffbea':'#fff0f0';
