@@ -1307,7 +1307,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-12-permfix-v3（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-14-holidayfix-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
 let currentCFMonthId=null;
@@ -2230,26 +2230,53 @@ function changeSchMonth(delta){
   renderScheduleCalendar();
 }
 
-// ── 台灣國定假日（資料來源：ruyut/TaiwanCalendar，同步自政府資料開放平台） ──
+// ── 台灣國定假日（資料來源：ruyut/TaiwanCalendar，若抓不到則改用 pin-yi.me 備援 API，皆同步自政府資料開放平台） ──
 const TW_HOLIDAY_CACHE={};
 async function loadTaiwanHolidays(year){
   if(TW_HOLIDAY_CACHE[year]) return TW_HOLIDAY_CACHE[year];
+  let map=null;
+  // 來源 1：ruyut/TaiwanCalendar（jsdelivr CDN）
   try{
     const res=await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
-    if(!res.ok) throw new Error('查無資料');
-    const arr=await res.json();
-    const map={};
-    arr.forEach(item=>{
-      const d=item.date; // 'YYYYMMDD'
-      const iso=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
-      map[iso]={isHoliday:!!item.isHoliday,description:item.description||''};
-    });
-    TW_HOLIDAY_CACHE[year]=map;
-  }catch(e){
-    console.warn('無法取得台灣國定假日資料（該年度可能尚未公布）',year,e);
-    TW_HOLIDAY_CACHE[year]={};
+    if(res.ok){
+      const arr=await res.json();
+      if(Array.isArray(arr) && arr.length){
+        map={};
+        arr.forEach(item=>{
+          const d=item.date; // 'YYYYMMDD'
+          const iso=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+          map[iso]={isHoliday:!!item.isHoliday,description:item.description||''};
+        });
+        console.log(`[國定假日] 已從 ruyut/TaiwanCalendar 載入 ${year} 年資料，共 ${arr.length} 筆`);
+      }
+    }
+  }catch(e){ console.warn('[國定假日] 來源1 (ruyut) 失敗',year,e); }
+
+  // 來源 2：pin-yi.me 備援 API
+  if(!map){
+    try{
+      const res2=await fetch(`https://api.pin-yi.me/taiwan-calendar/${year}`);
+      if(res2.ok){
+        const arr2=await res2.json();
+        if(Array.isArray(arr2) && arr2.length){
+          map={};
+          arr2.forEach(item=>{
+            const d=item.date;
+            const iso=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+            map[iso]={isHoliday:!!item.isHoliday,description:item.caption||item.description||''};
+          });
+          console.log(`[國定假日] 已從備援 API (pin-yi.me) 載入 ${year} 年資料，共 ${arr2.length} 筆`);
+        }
+      }
+    }catch(e){ console.warn('[國定假日] 來源2 (pin-yi.me) 失敗',year,e); }
   }
-  return TW_HOLIDAY_CACHE[year];
+
+  if(!map){
+    console.warn(`[國定假日] ${year} 年資料兩個來源都無法取得，月曆將不顯示假日標示`);
+    map={};
+  }
+  TW_HOLIDAY_CACHE[year]=map;
+  return map;
 }
 
 async function renderScheduleCalendar(){
