@@ -537,6 +537,10 @@
             <div style="font-size:16px;font-weight:700;color:var(--navy);min-width:130px;text-align:center" id="sch-month-label"></div>
             <button onclick="changeSchMonth(1)" style="padding:6px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);background:#fff;cursor:pointer;font-size:18px;font-weight:700">›</button>
           </div>
+          <div style="display:flex;gap:16px;justify-content:center;margin-bottom:14px;font-size:11.5px;color:var(--gray-400)">
+            <span>🎌 <span style="color:#e53e3e;font-weight:600">紅字</span>＝台灣國定假日</span>
+            <span>⚠ <span style="color:#c2740a;font-weight:600">橘字</span>＝補行上班（例假日仍需上班）</span>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
             <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:#e53e3e">日</div>
             <div style="text-align:center;font-size:13px;font-family:&quot;Microsoft JhengHei&quot;,Arial,sans-serif;font-weight:700;padding:6px 0;color:var(--gray-600)">一</div>
@@ -2226,11 +2230,34 @@ function changeSchMonth(delta){
   renderScheduleCalendar();
 }
 
-function renderScheduleCalendar(){
+// ── 台灣國定假日（資料來源：ruyut/TaiwanCalendar，同步自政府資料開放平台） ──
+const TW_HOLIDAY_CACHE={};
+async function loadTaiwanHolidays(year){
+  if(TW_HOLIDAY_CACHE[year]) return TW_HOLIDAY_CACHE[year];
+  try{
+    const res=await fetch(`https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`);
+    if(!res.ok) throw new Error('查無資料');
+    const arr=await res.json();
+    const map={};
+    arr.forEach(item=>{
+      const d=item.date; // 'YYYYMMDD'
+      const iso=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+      map[iso]={isHoliday:!!item.isHoliday,description:item.description||''};
+    });
+    TW_HOLIDAY_CACHE[year]=map;
+  }catch(e){
+    console.warn('無法取得台灣國定假日資料（該年度可能尚未公布）',year,e);
+    TW_HOLIDAY_CACHE[year]={};
+  }
+  return TW_HOLIDAY_CACHE[year];
+}
+
+async function renderScheduleCalendar(){
   document.getElementById('sch-month-label').textContent = `${schYear} 年 ${schMonth+1} 月`;
   const grid = document.getElementById('sch-calendar-grid');
   grid.innerHTML = '';
 
+  const holidayMap = await loadTaiwanHolidays(schYear) || {};
   const firstDay = new Date(schYear, schMonth, 1).getDay();
   const daysInMonth = new Date(schYear, schMonth+1, 0).getDate();
   const today = new Date().toISOString().split('T')[0];
@@ -2255,15 +2282,30 @@ function renderScheduleCalendar(){
     const dow = new Date(schYear, schMonth, day).getDay();
     const isToday = dateStr===today;
     const isWeekend = dow===0||dow===6;
+    const holiday = holidayMap[dateStr];
+    const isTwHoliday = holiday && holiday.isHoliday;
+    const isMakeupWorkday = holiday && !holiday.isHoliday && holiday.description; // 補行上班（原為假日但需上班）
+
+    let bg = isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff';
+    if(isTwHoliday) bg = isToday?'#fffbea':'#fff0f0';
+    else if(isMakeupWorkday) bg = isToday?'#fffbea':'#fff7e6';
 
     const cell = document.createElement('div');
-    cell.style.cssText = `min-height:100px;background:${isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff'};border-radius:6px;padding:6px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'};cursor:pointer`;
+    cell.style.cssText = `min-height:100px;background:${bg};border-radius:6px;padding:6px;border:${isToday?'2px solid var(--gold)':'1px solid var(--gray-200)'};cursor:pointer`;
     cell.onclick = () => openAddScheduleModal(dateStr);
 
     const dayLabel = document.createElement('div');
-    dayLabel.style.cssText = `font-size:14px;font-family:"Microsoft JhengHei","PingFang TC",Arial,sans-serif;font-weight:700;color:${dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:4px`;
+    dayLabel.style.cssText = `font-size:14px;font-family:"Microsoft JhengHei","PingFang TC",Arial,sans-serif;font-weight:700;color:${isTwHoliday?'#e53e3e':dow===0?'#e53e3e':dow===6?'#3182ce':'var(--gray-600)'};margin-bottom:4px`;
     dayLabel.textContent = day;
     cell.appendChild(dayLabel);
+
+    if(isTwHoliday || isMakeupWorkday){
+      const hTag=document.createElement('div');
+      hTag.style.cssText=`font-size:10.5px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${isTwHoliday?'#e53e3e':'#c2740a'}`;
+      hTag.title = holiday.description;
+      hTag.textContent = (isTwHoliday?'🎌 ':'⚠ ') + (holiday.description||(isTwHoliday?'國定假日':'補行上班'));
+      cell.appendChild(hTag);
+    }
 
     // 當日有哪些排休
     const dayItems = monthItems.filter(s=>s.startDate<=dateStr && s.endDate>=dateStr);
