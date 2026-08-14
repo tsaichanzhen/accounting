@@ -315,7 +315,7 @@
       <!-- WEEKLY -->
       <div class="section" id="sec-weekly">
         <div class="page-header">
-          <div><div class="page-title">週報填寫</div><div class="page-subtitle">每週工作進度回報，隔週一彙整寄送副理</div></div>
+          <div><div class="page-title">週報填寫</div><div class="page-subtitle">每週工作進度回報，隔週一彙整寄送部門主管</div></div>
           <button class="btn btn-primary" onclick="openWeeklyModal()">＋ 填寫本週週報</button>
         </div>
         <div class="filter-bar">
@@ -386,7 +386,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>主管姓名</label>
-              <input type="text" id="manager-name" placeholder="例：王副理">
+              <input type="text" id="manager-name" placeholder="例：王主管">
             </div>
           </div>
           <div class="form-row">
@@ -1307,8 +1307,60 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-14-holidayfix-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-14-session-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
+
+// ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
+const SESSION_KEY='cwj_session';
+const IDLE_LIMIT_MS=2*60*60*1000; // 2 小時
+function saveSession(){
+  if(!currentUser) return;
+  localStorage.setItem(SESSION_KEY, JSON.stringify({userId:currentUser.id, lastActive:Date.now()}));
+}
+function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+function touchSession(){
+  if(!currentUser) return;
+  try{
+    const raw=localStorage.getItem(SESSION_KEY);
+    const session=raw?JSON.parse(raw):{userId:currentUser.id};
+    session.lastActive=Date.now();
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }catch(e){}
+}
+function checkIdleTimeout(){
+  if(!currentUser) return;
+  const raw=localStorage.getItem(SESSION_KEY);
+  if(!raw) return;
+  try{
+    const session=JSON.parse(raw);
+    if(Date.now()-(session.lastActive||0) > IDLE_LIMIT_MS){
+      showNotify('閒置超過 2 小時，已自動登出','error');
+      doLogout();
+    }
+  }catch(e){}
+}
+async function tryRestoreSession(){
+  const raw=localStorage.getItem(SESSION_KEY);
+  if(!raw) return;
+  let session;
+  try{ session=JSON.parse(raw); }catch(e){ clearSession(); return; }
+  if(!session.userId || Date.now()-(session.lastActive||0) > IDLE_LIMIT_MS){ clearSession(); return; }
+  try{
+    const accounts=await sbGet('accounts',`id=eq.${session.userId}`);
+    const acc=accounts[0];
+    if(!acc || !acc.active){ clearSession(); return; }
+    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role,permissions:acc.permissions||null};
+    touchSession();
+    await enterApp();
+  }catch(e){ console.warn('還原登入狀態失敗，需重新登入',e); }
+}
+// 使用者有操作（點擊/按鍵/滑動）時，更新最後活動時間；每分鐘檢查一次是否超過閒置上限
+['click','keydown','mousemove','scroll','touchstart'].forEach(evt=>{
+  document.addEventListener(evt, ()=>touchSession(), {passive:true});
+});
+setInterval(checkIdleTimeout, 60*1000);
+tryRestoreSession(); // script 位於 body 底部，DOM 此時已備妥，直接呼叫即可
+
 let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
 let currentCFMonthId=null;
 const ORIGINAL_SECTION_HTML={};
@@ -1324,6 +1376,7 @@ async function doLogin(){
     if(!acc){document.getElementById('login-err').textContent='帳號或密碼錯誤，請重新輸入';return;}
     currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role,permissions:acc.permissions||null};
     await sbInsert('login_logs',{id:pid(),user_id:acc.id,name:acc.name,username:acc.username,login_at:nowStr(),logout_at:null,action:'登入'});
+    saveSession();
     await enterApp();
   }catch(e){document.getElementById('login-err').textContent='連線失敗，請確認網路';}
 }
@@ -1416,8 +1469,11 @@ async function loadAllCache(){
 
 async function doLogout(){
   if(autoRefreshTimer){ clearInterval(autoRefreshTimer); autoRefreshTimer=null; }
-  const logs=await sbGet('login_logs',`user_id=eq.${currentUser.id}&logout_at=is.null&limit=1`);
-  if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
+  if(currentUser){
+    const logs=await sbGet('login_logs',`user_id=eq.${currentUser.id}&logout_at=is.null&limit=1`);
+    if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
+  }
+  clearSession();
   currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
   Object.keys(READONLY_OBSERVERS).forEach(k=>{ READONLY_OBSERVERS[k].disconnect(); delete READONLY_OBSERVERS[k]; });
   PERMISSION_SECTIONS.forEach(s=>restoreSectionUIIfLocked(s.key));
@@ -2310,7 +2366,7 @@ async function renderScheduleCalendar(){
     const isToday = dateStr===today;
     const isWeekend = dow===0||dow===6;
     const holiday = holidayMap[dateStr];
-    const isTwHoliday = holiday && holiday.isHoliday && !isWeekend; // 週休二日本身已標示，國定假日只在平日才需要額外提示
+    const isTwHoliday = holiday && holiday.isHoliday; // 國定假日不論平日或週末都顯示
     const isMakeupWorkday = holiday && !holiday.isHoliday && holiday.description; // 補行上班／補課（不論平日或假日都要標示，因為這代表原本該休的日子要上班）
 
     let bg = isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff';
