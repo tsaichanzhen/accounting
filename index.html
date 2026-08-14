@@ -2366,7 +2366,7 @@ async function renderScheduleCalendar(){
     const isToday = dateStr===today;
     const isWeekend = dow===0||dow===6;
     const holiday = holidayMap[dateStr];
-    const isTwHoliday = holiday && holiday.isHoliday; // 國定假日不論平日或週末都顯示
+    const isTwHoliday = holiday && holiday.isHoliday && holiday.description; // 只有「有名稱」的節日才顯示（一般週休二日 description 為空，不顯示）
     const isMakeupWorkday = holiday && !holiday.isHoliday && holiday.description; // 補行上班／補課（不論平日或假日都要標示，因為這代表原本該休的日子要上班）
 
     let bg = isToday?'#fffbea':isWeekend?'#f8f8f8':'#fff';
