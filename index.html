@@ -393,7 +393,7 @@
           <div class="card-title">🏬 各區域繳單類型設定</div>
           <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:10px">勾選該區域適用哪些繳單類型，未勾選的類型不會出現在「繳單進度」的區域選單與進度總覽中</div>
           <div class="table-wrap"><table>
-            <thead><tr><th>區域</th><th>負責人</th><th style="text-align:center">月結</th><th style="text-align:center">20轉月</th></tr></thead>
+            <thead><tr><th>區域</th><th>核單人員</th><th>核帳人員</th><th style="text-align:center">月結</th><th style="text-align:center">20轉月</th></tr></thead>
             <tbody id="area-type-table"></tbody>
           </table></div>
         </div>
@@ -1173,22 +1173,6 @@
   </div>
 </div>
 
-<!-- MODAL: 負責區域設定 -->
-<div class="modal-overlay" id="modal-edit-areas">
-  <div class="modal" style="width:480px">
-    <div class="modal-title" id="ea-title">🏬 負責區域設定</div>
-    <input type="hidden" id="ea-user-id">
-    <div class="form-group">
-      <label>勾選此人員負責的區域（新增繳單紀錄時會自動帶出，不用逐一選取）</label>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 12px;background:var(--gray-100);border-radius:var(--radius);max-height:280px;overflow-y:auto" id="ea-area-checks"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-edit-areas')">取消</button>
-      <button class="btn btn-primary" onclick="saveUserAreas()">儲存</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL: 零用金每日紀錄 -->
 <div class="modal-overlay" id="modal-pettycash">
   <div class="modal" style="width:520px">
@@ -1346,7 +1330,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-21-areaowner-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-21-checkerauditor-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1494,7 +1478,7 @@ async function loadAllCache(){
     sbGet('cash_forecast_bank_balance'),
   ]);
   CACHE.payments=payments.map(p=>({id:p.id,userId:p.user_id,area:p.area,fillDate:p.fill_date,date:p.date,note:p.note,paymentType:p.payment_type||'monthly',user:p.user,createdAt:p.created_at}));
-  CACHE.areaPaymentTypes=areaPaymentTypes.map(a=>({id:a.id,area:a.area,hasMonthly:a.has_monthly!==false,hasTransfer:a.has_transfer!==false}));
+  CACHE.areaPaymentTypes=areaPaymentTypes.map(a=>({id:a.id,area:a.area,hasMonthly:a.has_monthly!==false,hasTransfer:a.has_transfer!==false,checkerUserId:a.checker_user_id||'',auditUserId:a.audit_user_id||''}));
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
   CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
@@ -1668,8 +1652,11 @@ function openPaymentModal(){
   // 預設與目前頁簽一致
   currentModalType = currentPaymentType;
   switchModalTab(currentModalType);
-  // 若此人員有設定負責區域，自動帶出對應的區域列（限該類型適用的區域），不用手動逐一新增
-  const myAreas=(currentUser.assignedAreas||[]).filter(a=>areaAppliesToType(a,currentModalType));
+  // 若此人員被設為某些區域的「核單人員」，自動帶出對應的區域列（限該類型適用的區域），不用手動逐一新增
+  const myAreas=AREA_OPTIONS.filter(a=>{
+    const cfg=CACHE.areaPaymentTypes.find(x=>x.area===a);
+    return cfg && cfg.checkerUserId===currentUser.id;
+  }).filter(a=>areaAppliesToType(a,currentModalType));
   if(myAreas.length){
     myAreas.forEach(a=>addAreaRow(a));
   }else{
@@ -2076,7 +2063,6 @@ function renderUserTable(){
       <button class="btn btn-sm btn-outline" onclick="toggleUserActive('${a.id}',${!a.active})">${a.active?'停用':'啟用'}</button>
       <button class="btn btn-sm btn-outline" onclick="toggleUserRole('${a.id}','${a.role==='admin'?'user':'admin'}')">${a.role==='admin'?'改為一般人員':'設為管理員'}</button>
       ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditPermModal('${a.id}')">權限</button>`:''}
-      ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditAreasModal('${a.id}')">負責區域</button>`:''}
     </td></tr>`;
   }).join('');
   renderAreaTypeTable();
@@ -2103,42 +2089,35 @@ async function toggleUserRole(id, newRole){
     showNotify('儲存失敗：'+msg,'error');
   }
 }
-function getAreaOwnerId(area){
-  const owner=CACHE.accounts.find(a=>a.role!=='admin' && (a.assignedAreas||[]).includes(area));
-  return owner?owner.id:'';
+function areaPersonOptionsHtml(currentId){
+  const staff=CACHE.accounts.filter(a=>a.username!=='admin'); // 帳號管理所有人員（含管理員），只排除系統管理員本人
+  return ['<option value="">未指定</option>'].concat(
+    staff.map(a=>`<option value="${a.id}"${a.id===currentId?' selected':''}>${a.name}${a.active?'':'（已停用）'}</option>`)
+  ).join('');
 }
-function areaOwnerSelectHtml(area){
-  const staff=CACHE.accounts.filter(a=>a.role!=='admin'); // 帳號管理內所有非管理員人員，隨名單即時更新
-  const currentOwnerId=getAreaOwnerId(area);
-  const options=['<option value="">未指定</option>'].concat(
-    staff.map(a=>`<option value="${a.id}"${a.id===currentOwnerId?' selected':''}>${a.name}${a.active?'':'（已停用）'}</option>`)
-  );
-  return `<select onchange="saveAreaOwner('${area}',this.value)" style="width:100%;padding:5px 6px;font-size:12.5px">${options.join('')}</select>`;
-}
-async function saveAreaOwner(area, newOwnerId){
-  const prevOwner=CACHE.accounts.find(a=>a.role!=='admin' && (a.assignedAreas||[]).includes(area));
-  if(prevOwner && prevOwner.id===newOwnerId) return; // 沒有變動
-  // 先把區域從原負責人移除
-  if(prevOwner){
-    const newList=(prevOwner.assignedAreas||[]).filter(a=>a!==area);
-    const result=await sbUpdateDebug('accounts',prevOwner.id,{assigned_areas:newList});
-    if(result.ok){ prevOwner.assignedAreas=newList; }
-    else{ showNotify('儲存失敗：'+(result.error?.message||result.status),'error'); renderAreaTypeTable(); return; }
-  }
-  // 再把區域加到新負責人
-  if(newOwnerId){
-    const newOwner=CACHE.accounts.find(a=>a.id===newOwnerId);
-    if(newOwner){
-      const newList=[...new Set([...(newOwner.assignedAreas||[]), area])];
-      const result=await sbUpdateDebug('accounts',newOwner.id,{assigned_areas:newList});
-      if(result.ok){
-        newOwner.assignedAreas=newList;
-        if(currentUser && currentUser.id===newOwner.id) currentUser.assignedAreas=newList;
-      }else{ showNotify('儲存失敗：'+(result.error?.message||result.status),'error'); renderAreaTypeTable(); return; }
+async function saveAreaChecker(area, userId){
+  let cfg=CACHE.areaPaymentTypes.find(a=>a.area===area);
+  if(cfg){
+    const result=await sbUpdateDebug('area_payment_types',cfg.id,{checker_user_id:userId||null,updated_at:nowStr()});
+    if(result.ok){ cfg.checkerUserId=userId; showNotify(`${area} 核單人員已更新 ✓`,'success'); }
+    else{
+      const msg=result.error?.message||result.error?.hint||result.error?.code||('HTTP '+result.status);
+      console.error('area_payment_types checker_user_id 更新失敗',result);
+      showNotify('儲存失敗：'+msg,'error');
+    }
+  }else{
+    const newId=pid();
+    const payload={id:newId,area,has_monthly:true,has_transfer:true,checker_user_id:userId||null};
+    const result=await sbInsertDebug('area_payment_types',payload);
+    if(result.ok){
+      CACHE.areaPaymentTypes.push({id:newId,area,hasMonthly:true,hasTransfer:true,checkerUserId:userId,auditUserId:''});
+      showNotify(`${area} 核單人員已更新 ✓`,'success');
+    }else{
+      const msg=result.error?.message||result.error?.hint||result.error?.code||('HTTP '+result.status);
+      console.error('area_payment_types 新增失敗',result);
+      showNotify('儲存失敗：'+msg,'error');
     }
   }
-  showNotify(`${area} 的負責人已更新 ✓`,'success');
-  renderAreaTypeTable();
 }
 function renderAreaTypeTable(){
   const tb=document.getElementById('area-type-table');
@@ -2147,12 +2126,39 @@ function renderAreaTypeTable(){
     const cfg=CACHE.areaPaymentTypes.find(a=>a.area===area);
     const hasMonthly=cfg?cfg.hasMonthly:true;
     const hasTransfer=cfg?cfg.hasTransfer:true;
+    const checkerId=cfg?cfg.checkerUserId:'';
+    const auditId=cfg?cfg.auditUserId:'';
     return `<tr><td>${area}</td>
-      <td>${areaOwnerSelectHtml(area)}</td>
+      <td><select onchange="saveAreaChecker('${area}',this.value)" style="width:100%;padding:5px 6px;font-size:12.5px">${areaPersonOptionsHtml(checkerId)}</select></td>
+      <td><select onchange="saveAreaAuditor('${area}',this.value)" style="width:100%;padding:5px 6px;font-size:12.5px">${areaPersonOptionsHtml(auditId)}</select></td>
       <td style="text-align:center"><input type="checkbox" ${hasMonthly?'checked':''} onchange="saveAreaPaymentType('${area}','has_monthly',this.checked)"></td>
       <td style="text-align:center"><input type="checkbox" ${hasTransfer?'checked':''} onchange="saveAreaPaymentType('${area}','has_transfer',this.checked)"></td>
     </tr>`;
   }).join('');
+}
+async function saveAreaAuditor(area, userId){
+  let cfg=CACHE.areaPaymentTypes.find(a=>a.area===area);
+  if(cfg){
+    const result=await sbUpdateDebug('area_payment_types',cfg.id,{audit_user_id:userId||null,updated_at:nowStr()});
+    if(result.ok){ cfg.auditUserId=userId; showNotify(`${area} 核帳人員已更新 ✓`,'success'); }
+    else{
+      const msg=result.error?.message||result.error?.hint||result.error?.code||('HTTP '+result.status);
+      console.error('area_payment_types audit_user_id 更新失敗',result);
+      showNotify('儲存失敗：'+msg,'error');
+    }
+  }else{
+    const newId=pid();
+    const payload={id:newId,area,has_monthly:true,has_transfer:true,audit_user_id:userId||null};
+    const result=await sbInsertDebug('area_payment_types',payload);
+    if(result.ok){
+      CACHE.areaPaymentTypes.push({id:newId,area,hasMonthly:true,hasTransfer:true,auditUserId:userId});
+      showNotify(`${area} 核帳人員已更新 ✓`,'success');
+    }else{
+      const msg=result.error?.message||result.error?.hint||result.error?.code||('HTTP '+result.status);
+      console.error('area_payment_types 新增失敗',result);
+      showNotify('儲存失敗：'+msg,'error');
+    }
+  }
 }
 async function saveAreaPaymentType(area, field, value){
   let cfg=CACHE.areaPaymentTypes.find(a=>a.area===area);
@@ -2185,34 +2191,6 @@ function openEditPermModal(userId){
   document.getElementById('ep-title').textContent=`🔐 編輯權限：${acc.name}`;
   document.getElementById('ep-perm-checks').innerHTML=permSelectHtml('ep',acc.permissions);
   document.getElementById('modal-edit-perm').classList.add('open');
-}
-function openEditAreasModal(userId){
-  const acc=CACHE.accounts.find(a=>a.id===userId);
-  if(!acc) return;
-  document.getElementById('ea-user-id').value=userId;
-  document.getElementById('ea-title').textContent=`🏬 負責區域設定：${acc.name}`;
-  const assigned=acc.assignedAreas||[];
-  document.getElementById('ea-area-checks').innerHTML=AREA_OPTIONS.map(a=>
-    `<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="checkbox" value="${a}" ${assigned.includes(a)?'checked':''} style="width:auto"> ${a}</label>`
-  ).join('');
-  document.getElementById('modal-edit-areas').classList.add('open');
-}
-async function saveUserAreas(){
-  const userId=document.getElementById('ea-user-id').value;
-  const checked=[...document.querySelectorAll('#ea-area-checks input:checked')].map(el=>el.value);
-  const result=await sbUpdateDebug('accounts',userId,{assigned_areas:checked});
-  if(result.ok){
-    const acc=CACHE.accounts.find(a=>a.id===userId);
-    if(acc) acc.assignedAreas=checked;
-    if(currentUser && currentUser.id===userId) currentUser.assignedAreas=checked;
-    closeModal('modal-edit-areas');
-    renderUserTable();
-    showNotify('負責區域已更新 ✓','success');
-  }else{
-    const msg=result.error?.message||result.error?.hint||('HTTP '+result.status);
-    console.error('accounts assigned_areas 更新失敗',result);
-    showNotify('儲存失敗：'+msg,'error');
-  }
 }
 async function saveUserPermissions(){
   const userId=document.getElementById('ep-user-id').value;
