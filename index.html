@@ -1330,7 +1330,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-17-paymentperiodselect-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-17-pdfareafilter-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -3753,7 +3753,6 @@ function pdfText(doc,text,x,y,cellW,lineH,opts){
 
 // ── 繳單進度 PDF ──
 function exportPaymentPDF(){
-  const ALL_AREAS=['1B','1F','1G','1H','1E','1J','燦坤','特力屋','愛買','家福','寶雅','2A','2B','3A','3B','3C','5A','5B','5C','5D','5E','5F','5G','5S'];
   const payments=CACHE.payments;
   const from=document.getElementById('filter-date-from').value;
   const to=document.getElementById('filter-date-to').value;
@@ -3761,7 +3760,10 @@ function exportPaymentPDF(){
   let base=payments;
   // 依目前頁簽篩選
   base = base.filter(p=>(p.paymentType||'monthly')===currentPaymentType);
-  const targetAreas=areaFilter?[areaFilter]:ALL_AREAS;
+  // 只列出「該結帳類型有勾選適用」的區域；若管理員之後調整區域的結帳方式，這裡會自動同步
+  const applicableAreas=AREA_OPTIONS.filter(a=>areaAppliesToType(a,currentPaymentType));
+  const targetAreas=areaFilter?[areaFilter].filter(a=>applicableAreas.includes(a)):applicableAreas;
+  if(!targetAreas.length){showNotify('目前篩選的區域不適用此結帳類型，無資料可匯出','error');return;}
   const refDate=from||to||new Date().toISOString().split('T')[0];
   const refYear=refDate.slice(0,4);
   const refMonth=refDate.slice(5,7);
