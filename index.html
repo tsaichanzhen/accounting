@@ -1173,6 +1173,22 @@
   </div>
 </div>
 
+<!-- MODAL: 負責區域設定 -->
+<div class="modal-overlay" id="modal-edit-areas">
+  <div class="modal" style="width:480px">
+    <div class="modal-title" id="ea-title">🏬 負責區域設定</div>
+    <input type="hidden" id="ea-user-id">
+    <div class="form-group">
+      <label>勾選此人員負責的區域（新增繳單紀錄時會自動帶出，不用逐一選取）</label>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;padding:10px 12px;background:var(--gray-100);border-radius:var(--radius);max-height:280px;overflow-y:auto" id="ea-area-checks"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-areas')">取消</button>
+      <button class="btn btn-primary" onclick="saveUserAreas()">儲存</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 零用金每日紀錄 -->
 <div class="modal-overlay" id="modal-pettycash">
   <div class="modal" style="width:520px">
@@ -1330,7 +1346,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-17-sessionfix-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-21-roletoggle-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1372,7 +1388,7 @@ async function tryRestoreSession(){
     const accounts=await sbGet('accounts',`id=eq.${session.userId}`);
     const acc=accounts[0];
     if(!acc || !acc.active){ clearSession(); return; }
-    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role,permissions:acc.permissions||null};
+    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role,permissions:acc.permissions||null,assignedAreas:acc.assigned_areas||[]};
     touchSession();
     await enterApp();
   }catch(e){ console.warn('還原登入狀態失敗，需重新登入',e); }
@@ -1397,7 +1413,7 @@ async function doLogin(){
     const accounts=await sbGet('accounts',`username=eq.${encodeURIComponent(u)}&active=eq.true`);
     const acc=accounts.find(a=>a.password===p);
     if(!acc){document.getElementById('login-err').textContent='帳號或密碼錯誤，請重新輸入';return;}
-    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role,permissions:acc.permissions||null};
+    currentUser={id:acc.id,name:acc.name,username:acc.username,role:acc.role,permissions:acc.permissions||null,assignedAreas:acc.assigned_areas||[]};
     await sbInsert('login_logs',{id:pid(),user_id:acc.id,name:acc.name,username:acc.username,login_at:nowStr(),logout_at:null,action:'登入'});
     saveSession();
     await enterApp();
@@ -1482,7 +1498,7 @@ async function loadAllCache(){
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
   CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
-  CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||'',permissions:a.permissions||null}));
+  CACHE.accounts=accounts.map(a=>({id:a.id,name:a.name,username:a.username,password:a.password,role:a.role,active:a.active,created:a.created,hint:a.hint||'',permissions:a.permissions||null,assignedAreas:a.assigned_areas||[]}));
   CACHE.schedules=schedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,typeGroup:s.type_group,leaveType:s.leave_type,startDate:s.start_date,startTime:s.start_time||null,endDate:s.end_date,endTime:s.end_time||null,note:s.note,createdAt:s.created_at}));
   CACHE.personalSchedules=personalSchedules.map(s=>({id:s.id,userId:s.user_id,userName:s.user_name,date:s.date,title:s.title,leaveType:s.leave_type,note:s.note,createdAt:s.created_at}));
   CACHE.pettyCashRecords=pettyCashRecords.map(r=>({id:r.id,recordDate:r.record_date,prevBalance:Number(r.prev_balance||0),income:Number(r.income||0),expense:Number(r.expense||0),balance:Number(r.balance||0),countedAmount:r.counted_amount===null?null:Number(r.counted_amount),difference:r.difference===null?null:Number(r.difference),note:r.note||'',createdBy:r.created_by,updatedAt:r.updated_at}));
@@ -1652,7 +1668,13 @@ function openPaymentModal(){
   // 預設與目前頁簽一致
   currentModalType = currentPaymentType;
   switchModalTab(currentModalType);
-  addAreaRow();
+  // 若此人員有設定負責區域，自動帶出對應的區域列（限該類型適用的區域），不用手動逐一新增
+  const myAreas=(currentUser.assignedAreas||[]).filter(a=>areaAppliesToType(a,currentModalType));
+  if(myAreas.length){
+    myAreas.forEach(a=>addAreaRow(a));
+  }else{
+    addAreaRow();
+  }
   document.getElementById('modal-payment').classList.add('open');
 }
 
@@ -2052,10 +2074,34 @@ function renderUserTable(){
     }
     return `<tr><td>${a.name}</td><td>${a.username}</td><td><span class="badge ${a.role==='admin'?'badge-orange':'badge-blue'}">${a.role==='admin'?'管理員':'一般人員'}</span></td><td><span class="badge ${a.active?'badge-green':'badge-red'}">${a.active?'啟用':'停用'}</span></td><td style="font-size:12px;white-space:nowrap">${permLabel}</td><td>${a.created}</td><td>
       <button class="btn btn-sm btn-outline" onclick="toggleUserActive('${a.id}',${!a.active})">${a.active?'停用':'啟用'}</button>
+      <button class="btn btn-sm btn-outline" onclick="toggleUserRole('${a.id}','${a.role==='admin'?'user':'admin'}')">${a.role==='admin'?'改為一般人員':'設為管理員'}</button>
       ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditPermModal('${a.id}')">權限</button>`:''}
+      ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditAreasModal('${a.id}')">負責區域</button>`:''}
     </td></tr>`;
   }).join('');
   renderAreaTypeTable();
+}
+async function toggleUserRole(id, newRole){
+  const acc=CACHE.accounts.find(a=>a.id===id);
+  if(!acc) return;
+  if(newRole==='user'){
+    const adminCount=CACHE.accounts.filter(a=>a.role==='admin'&&a.active).length;
+    if(adminCount<=1){ showNotify('至少需保留一位啟用中的管理員，無法將唯一的管理員改為一般人員','error'); return; }
+    if(!confirm(`確定要將「${acc.name}」改為一般人員嗎？將失去管理員權限（帳號管理、應收區域轉月設定、信箱設定、登入歷程等功能）。`)) return;
+  }else{
+    if(!confirm(`確定要將「${acc.name}」設為管理員嗎？將可存取所有功能，不受權限與負責區域限制。`)) return;
+  }
+  const result=await sbUpdateDebug('accounts',id,{role:newRole});
+  if(result.ok){
+    acc.role=newRole;
+    if(currentUser && currentUser.id===id) currentUser.role=newRole;
+    renderUserTable();
+    showNotify(`已將「${acc.name}」設為${newRole==='admin'?'管理員':'一般人員'} ✓`,'success');
+  }else{
+    const msg=result.error?.message||result.error?.hint||('HTTP '+result.status);
+    console.error('accounts role 更新失敗',result);
+    showNotify('儲存失敗：'+msg,'error');
+  }
 }
 function renderAreaTypeTable(){
   const tb=document.getElementById('area-type-table');
@@ -2101,6 +2147,34 @@ function openEditPermModal(userId){
   document.getElementById('ep-title').textContent=`🔐 編輯權限：${acc.name}`;
   document.getElementById('ep-perm-checks').innerHTML=permSelectHtml('ep',acc.permissions);
   document.getElementById('modal-edit-perm').classList.add('open');
+}
+function openEditAreasModal(userId){
+  const acc=CACHE.accounts.find(a=>a.id===userId);
+  if(!acc) return;
+  document.getElementById('ea-user-id').value=userId;
+  document.getElementById('ea-title').textContent=`🏬 負責區域設定：${acc.name}`;
+  const assigned=acc.assignedAreas||[];
+  document.getElementById('ea-area-checks').innerHTML=AREA_OPTIONS.map(a=>
+    `<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;font-weight:400"><input type="checkbox" value="${a}" ${assigned.includes(a)?'checked':''} style="width:auto"> ${a}</label>`
+  ).join('');
+  document.getElementById('modal-edit-areas').classList.add('open');
+}
+async function saveUserAreas(){
+  const userId=document.getElementById('ea-user-id').value;
+  const checked=[...document.querySelectorAll('#ea-area-checks input:checked')].map(el=>el.value);
+  const result=await sbUpdateDebug('accounts',userId,{assigned_areas:checked});
+  if(result.ok){
+    const acc=CACHE.accounts.find(a=>a.id===userId);
+    if(acc) acc.assignedAreas=checked;
+    if(currentUser && currentUser.id===userId) currentUser.assignedAreas=checked;
+    closeModal('modal-edit-areas');
+    renderUserTable();
+    showNotify('負責區域已更新 ✓','success');
+  }else{
+    const msg=result.error?.message||result.error?.hint||('HTTP '+result.status);
+    console.error('accounts assigned_areas 更新失敗',result);
+    showNotify('儲存失敗：'+msg,'error');
+  }
 }
 async function saveUserPermissions(){
   const userId=document.getElementById('ep-user-id').value;
