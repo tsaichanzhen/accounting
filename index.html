@@ -393,7 +393,7 @@
           <div class="card-title">🏬 各區域繳單類型設定</div>
           <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:10px">勾選該區域適用哪些繳單類型，未勾選的類型不會出現在「繳單進度」的區域選單與進度總覽中</div>
           <div class="table-wrap"><table>
-            <thead><tr><th>區域</th><th style="text-align:center">月結</th><th style="text-align:center">20轉月</th></tr></thead>
+            <thead><tr><th>區域</th><th>負責人</th><th style="text-align:center">月結</th><th style="text-align:center">20轉月</th></tr></thead>
             <tbody id="area-type-table"></tbody>
           </table></div>
         </div>
@@ -1346,7 +1346,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-21-roletoggle-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-21-areaowner-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -2103,6 +2103,43 @@ async function toggleUserRole(id, newRole){
     showNotify('儲存失敗：'+msg,'error');
   }
 }
+function getAreaOwnerId(area){
+  const owner=CACHE.accounts.find(a=>a.role!=='admin' && (a.assignedAreas||[]).includes(area));
+  return owner?owner.id:'';
+}
+function areaOwnerSelectHtml(area){
+  const staff=CACHE.accounts.filter(a=>a.role!=='admin'); // 帳號管理內所有非管理員人員，隨名單即時更新
+  const currentOwnerId=getAreaOwnerId(area);
+  const options=['<option value="">未指定</option>'].concat(
+    staff.map(a=>`<option value="${a.id}"${a.id===currentOwnerId?' selected':''}>${a.name}${a.active?'':'（已停用）'}</option>`)
+  );
+  return `<select onchange="saveAreaOwner('${area}',this.value)" style="width:100%;padding:5px 6px;font-size:12.5px">${options.join('')}</select>`;
+}
+async function saveAreaOwner(area, newOwnerId){
+  const prevOwner=CACHE.accounts.find(a=>a.role!=='admin' && (a.assignedAreas||[]).includes(area));
+  if(prevOwner && prevOwner.id===newOwnerId) return; // 沒有變動
+  // 先把區域從原負責人移除
+  if(prevOwner){
+    const newList=(prevOwner.assignedAreas||[]).filter(a=>a!==area);
+    const result=await sbUpdateDebug('accounts',prevOwner.id,{assigned_areas:newList});
+    if(result.ok){ prevOwner.assignedAreas=newList; }
+    else{ showNotify('儲存失敗：'+(result.error?.message||result.status),'error'); renderAreaTypeTable(); return; }
+  }
+  // 再把區域加到新負責人
+  if(newOwnerId){
+    const newOwner=CACHE.accounts.find(a=>a.id===newOwnerId);
+    if(newOwner){
+      const newList=[...new Set([...(newOwner.assignedAreas||[]), area])];
+      const result=await sbUpdateDebug('accounts',newOwner.id,{assigned_areas:newList});
+      if(result.ok){
+        newOwner.assignedAreas=newList;
+        if(currentUser && currentUser.id===newOwner.id) currentUser.assignedAreas=newList;
+      }else{ showNotify('儲存失敗：'+(result.error?.message||result.status),'error'); renderAreaTypeTable(); return; }
+    }
+  }
+  showNotify(`${area} 的負責人已更新 ✓`,'success');
+  renderAreaTypeTable();
+}
 function renderAreaTypeTable(){
   const tb=document.getElementById('area-type-table');
   if(!tb) return;
@@ -2111,6 +2148,7 @@ function renderAreaTypeTable(){
     const hasMonthly=cfg?cfg.hasMonthly:true;
     const hasTransfer=cfg?cfg.hasTransfer:true;
     return `<tr><td>${area}</td>
+      <td>${areaOwnerSelectHtml(area)}</td>
       <td style="text-align:center"><input type="checkbox" ${hasMonthly?'checked':''} onchange="saveAreaPaymentType('${area}','has_monthly',this.checked)"></td>
       <td style="text-align:center"><input type="checkbox" ${hasTransfer?'checked':''} onchange="saveAreaPaymentType('${area}','has_transfer',this.checked)"></td>
     </tr>`;
