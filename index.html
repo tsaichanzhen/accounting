@@ -1330,7 +1330,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-17-pdfareafilter-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-17-sessionfix-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1338,21 +1338,21 @@ const SESSION_KEY='cwj_session';
 const IDLE_LIMIT_MS=2*60*60*1000; // 2 小時
 function saveSession(){
   if(!currentUser) return;
-  localStorage.setItem(SESSION_KEY, JSON.stringify({userId:currentUser.id, lastActive:Date.now()}));
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({userId:currentUser.id, lastActive:Date.now()}));
 }
-function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+function clearSession(){ sessionStorage.removeItem(SESSION_KEY); }
 function touchSession(){
   if(!currentUser) return;
   try{
-    const raw=localStorage.getItem(SESSION_KEY);
+    const raw=sessionStorage.getItem(SESSION_KEY);
     const session=raw?JSON.parse(raw):{userId:currentUser.id};
     session.lastActive=Date.now();
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }catch(e){}
 }
 function checkIdleTimeout(){
   if(!currentUser) return;
-  const raw=localStorage.getItem(SESSION_KEY);
+  const raw=sessionStorage.getItem(SESSION_KEY);
   if(!raw) return;
   try{
     const session=JSON.parse(raw);
@@ -1363,7 +1363,7 @@ function checkIdleTimeout(){
   }catch(e){}
 }
 async function tryRestoreSession(){
-  const raw=localStorage.getItem(SESSION_KEY);
+  const raw=sessionStorage.getItem(SESSION_KEY);
   if(!raw) return;
   let session;
   try{ session=JSON.parse(raw); }catch(e){ clearSession(); return; }
