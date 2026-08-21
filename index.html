@@ -287,6 +287,11 @@
           <div id="tab-transfer" onclick="switchPaymentTab('transfer')" style="padding:9px 28px;font-size:14px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--gray-400)">20 轉月</div>
         </div>
 
+        <div class="card">
+          <div class="card-title">🚦 各區域繳單進度總覽<span id="payment-progress-threshold" style="font-weight:400;font-size:12px;color:var(--gray-400);margin-left:8px"></span></div>
+          <div id="payment-progress-status" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
+        </div>
+
         <div class="filter-bar">
           <div class="form-group"><label>起始日期</label><input type="date" id="filter-date-from" onchange="renderPaymentTable()"></div>
           <div class="form-group"><label>結束日期</label><input type="date" id="filter-date-to" onchange="renderPaymentTable()"></div>
@@ -374,6 +379,14 @@
           <div class="table-wrap"><table>
             <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th style="min-width:200px">權限</th><th>建立時間</th><th>操作</th></tr></thead>
             <tbody id="user-table"></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏬 各區域繳單類型設定</div>
+          <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:10px">勾選該區域適用哪些繳單類型，未勾選的類型不會出現在「繳單進度」的區域選單與進度總覽中</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>區域</th><th style="text-align:center">月結</th><th style="text-align:center">20轉月</th></tr></thead>
+            <tbody id="area-type-table"></tbody>
           </table></div>
         </div>
       </div>
@@ -1307,7 +1320,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-14-session-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-17-areatype-v2（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1361,7 +1374,7 @@ async function tryRestoreSession(){
 setInterval(checkIdleTimeout, 60*1000);
 tryRestoreSession(); // script 位於 body 底部，DOM 此時已備妥，直接呼叫即可
 
-let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
+let CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],areaPaymentTypes:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
 let currentCFMonthId=null;
 const ORIGINAL_SECTION_HTML={};
 
@@ -1435,7 +1448,7 @@ function startAutoRefresh(){
 }
 
 async function loadAllCache(){
-  const [payments,weeklies,kpis,loginLogs,accounts,schedules,personalSchedules,pettyCashRecords,pettyCashCounts,cfMonths,cfPeriods,cfCategories,cfValues,cfBankBalance]=await Promise.all([
+  const [payments,weeklies,kpis,loginLogs,accounts,schedules,personalSchedules,pettyCashRecords,pettyCashCounts,areaPaymentTypes,cfMonths,cfPeriods,cfCategories,cfValues,cfBankBalance]=await Promise.all([
     sbGet('payments','order=created_at.desc'),
     sbGet('weeklies','order=created_at.desc'),
     sbGet('kpis','order=created_at.desc'),
@@ -1445,6 +1458,7 @@ async function loadAllCache(){
     sbGet('personal_schedules','order=date.asc'),
     sbGet('petty_cash_records','order=record_date.asc'),
     sbGet('petty_cash_counts','order=count_date.asc'),
+    sbGet('area_payment_types','order=area.asc'),
     sbGet('cash_forecast_months','order=month_label.desc'),
     sbGet('cash_forecast_periods','order=period_order.asc'),
     sbGet('cash_forecast_categories','order=row_order.asc'),
@@ -1452,6 +1466,7 @@ async function loadAllCache(){
     sbGet('cash_forecast_bank_balance'),
   ]);
   CACHE.payments=payments.map(p=>({id:p.id,userId:p.user_id,area:p.area,fillDate:p.fill_date,date:p.date,note:p.note,paymentType:p.payment_type||'monthly',user:p.user,createdAt:p.created_at}));
+  CACHE.areaPaymentTypes=areaPaymentTypes.map(a=>({id:a.id,area:a.area,hasMonthly:a.has_monthly!==false,hasTransfer:a.has_transfer!==false}));
   CACHE.weeklies=weeklies.map(w=>({id:w.id,userId:w.user_id,userName:w.user_name,week:w.week,daterange:w.daterange,f1:w.f1,f2:w.f2,f3:w.f3,f4:w.f4,f5:w.f5,f6:w.f6,f7:w.f7,f8:w.f8,f9:w.f9,f10:w.f10,f11:w.f11,createdAt:w.created_at}));
   CACHE.kpis=kpis.map(k=>({id:k.id,userId:k.user_id,userName:k.user_name,month:k.month,quality:k.quality,ontime:k.ontime,report:k.report,support:k.support,optimize:k.optimize,attendance:k.attendance,total:k.total,refQuality:k.ref_quality,refOntime:k.ref_ontime,refReport:k.ref_report,refSupport:k.ref_support,refOptimize:k.ref_optimize,refAttendance:k.ref_attendance,reflection:k.reflection,createdAt:k.created_at}));
   CACHE.loginLogs=loginLogs.map(l=>({id:l.id,userId:l.user_id,name:l.name,username:l.username,loginAt:l.login_at,logoutAt:l.logout_at,action:l.action}));
@@ -1474,7 +1489,7 @@ async function doLogout(){
     if(logs.length) await sbUpdate('login_logs',logs[0].id,{logout_at:nowStr(),action:'登入/登出'});
   }
   clearSession();
-  currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
+  currentUser=null;CACHE={payments:[],weeklies:[],kpis:[],loginLogs:[],accounts:[],pettyCashRecords:[],pettyCashCounts:[],areaPaymentTypes:[],cfMonths:[],cfPeriods:[],cfCategories:[],cfValues:[],cfBankBalance:[]};
   Object.keys(READONLY_OBSERVERS).forEach(k=>{ READONLY_OBSERVERS[k].disconnect(); delete READONLY_OBSERVERS[k]; });
   PERMISSION_SECTIONS.forEach(s=>restoreSectionUIIfLocked(s.key));
   LOCKED_SECTIONS.clear();
@@ -1560,11 +1575,23 @@ function switchModalTab(type){
   tBtn.style.background = !isMonthly ? 'var(--navy)' : '#fff';
   tBtn.style.color = !isMonthly ? '#fff' : 'var(--gray-400)';
   tBtn.style.borderColor = !isMonthly ? 'var(--navy)' : 'var(--gray-200)';
+  // 切換類型時，重新產生每一列的區域選單，只顯示該類型適用的區域
+  document.querySelectorAll('#pm-area-list [id^="pm-area-"]').forEach(sel=>{
+    const current=sel.value;
+    sel.outerHTML=areaSelectHTML(sel.id, current, type);
+  });
 }
 
-function areaSelectHTML(id, defaultVal=''){
+function areaAppliesToType(area, type){
+  const cfg=CACHE.areaPaymentTypes.find(a=>a.area===area);
+  if(!cfg) return true; // 尚未設定過的區域，預設兩種類型都適用
+  return type==='monthly' ? cfg.hasMonthly : cfg.hasTransfer;
+}
+function areaSelectHTML(id, defaultVal='', type=currentModalType){
+  const options=AREA_OPTIONS.filter(a=>areaAppliesToType(a,type));
+  const useOptions=options.length?options:AREA_OPTIONS; // 保險：萬一該類型完全沒有可選區域，仍顯示全部避免卡住
   return `<select id="${id}" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit">
-    ${AREA_OPTIONS.map(a=>`<option${a===defaultVal?' selected':''}>${a}</option>`).join('')}
+    ${useOptions.map(a=>`<option${a===defaultVal?' selected':''}>${a}</option>`).join('')}
   </select>`;
 }
 
@@ -1644,7 +1671,64 @@ async function savePayment(){
   const typeLabel = currentModalType==='monthly'?'月結':'20轉月';
   showNotify(`【${typeLabel}】已儲存 ${successCount} 筆繳單紀錄 ✓`,'success');
 }
+// 每月以「上月26日～本月25日」為一期，隨日期自動往前推進（過期資料不計入，等於每期歸零重新計算）
+function getPaymentCycleRange(){
+  const now=new Date();
+  const y=now.getFullYear(), m=now.getMonth()+1, d=now.getDate();
+  const pad=n=>String(n).padStart(2,'0');
+  let endY=y, endM=m;
+  if(d>=26){ endM=m+1; if(endM>12){endM=1;endY=y+1;} }
+  const startM = endM===1?12:endM-1;
+  const startY = endM===1?endY-1:endY;
+  return { start:`${startY}-${pad(startM)}-26`, end:`${endY}-${pad(endM)}-25` };
+}
+// 依「1/6/11/16/21/27 日檢查點」規則，算出「今天」對應的應繳進度門檻日期
+function getPaymentProgressThreshold(){
+  const now=new Date();
+  const y=now.getFullYear(), m=now.getMonth()+1, d=now.getDate();
+  const pad=n=>String(n).padStart(2,'0');
+  if(d>=27) return `${y}-${pad(m)}-25`;
+  if(d>=21) return `${y}-${pad(m)}-20`;
+  if(d>=16) return `${y}-${pad(m)}-15`;
+  if(d>=11) return `${y}-${pad(m)}-10`;
+  if(d>=6) return `${y}-${pad(m)}-05`;
+  // 每月 1~5 日：應繳進度為「上月26日～上月月底」，門檻＝上月月底
+  const prevMonthLastDay=new Date(y, m-1, 0); // 當月第0天＝上月最後一天
+  return `${prevMonthLastDay.getFullYear()}-${pad(prevMonthLastDay.getMonth()+1)}-${pad(prevMonthLastDay.getDate())}`;
+}
+// 只計算「本期（26-25）」範圍內的紀錄，跨期的舊資料不列入，等於每期自動歸零重算
+function computeAreaLatestDates(list){
+  const {start,end}=getPaymentCycleRange();
+  const byArea={};
+  list.forEach(p=>{
+    if(!p.date) return;
+    if(p.date<start || p.date>end) return;
+    if(!byArea[p.area] || p.date>byArea[p.area]) byArea[p.area]=p.date;
+  });
+  return byArea;
+}
+function renderPaymentProgressStatus(){
+  const threshold=getPaymentProgressThreshold();
+  const {start,end}=getPaymentCycleRange();
+  const thresholdEl=document.getElementById('payment-progress-threshold');
+  if(thresholdEl) thresholdEl.textContent=`（本期範圍 ${start} ～ ${end }，今日應繳進度至少要到 ${threshold}）`;
+  const list=CACHE.payments.filter(p=>(p.paymentType||'monthly')===currentPaymentType);
+  const byArea=computeAreaLatestDates(list);
+  const el=document.getElementById('payment-progress-status');
+  if(!el) return;
+  const applicableAreas=AREA_OPTIONS.filter(a=>areaAppliesToType(a,currentPaymentType));
+  el.innerHTML=applicableAreas.map(area=>{
+    const latest=byArea[area];
+    const behind = !latest || latest<threshold;
+    return `<div style="padding:8px 6px;border-radius:var(--radius);font-size:12px;text-align:center;background:${behind?'#fde8e8':'#e6f7ee'};color:${behind?'#c0392b':'#1a7a4c'};border:1.5px solid ${behind?'#f1a9a0':'#a8e6c1'}">
+      <div style="font-weight:700">${area}</div>
+      <div style="font-size:10.5px;margin-top:3px">${latest||'本期尚無紀錄'}</div>
+      <div style="font-size:10.5px;margin-top:2px;font-weight:700">${behind?'⚠ 落後':'✓ 正常'}</div>
+    </div>`;
+  }).join('');
+}
 function renderPaymentTable(){
+  renderPaymentProgressStatus();
   const payments=CACHE.payments;
   const from=document.getElementById('filter-date-from').value;
   const to=document.getElementById('filter-date-to').value;
@@ -1660,8 +1744,15 @@ function renderPaymentTable(){
   });
   const areas=[...new Set(filtered.map(p=>p.area))];
   document.getElementById('payment-summary').innerHTML=`<div class="summary-item"><div class="s-label">總筆數</div><div class="s-value">${filtered.length}</div></div><div class="summary-item done"><div class="s-label">區域數</div><div class="s-value">${areas.length}</div></div><div class="summary-item missing"><div class="s-label">有備註筆數</div><div class="s-value">${filtered.filter(p=>p.note).length}</div></div>`;
+  const threshold=getPaymentProgressThreshold();
+  const latestByArea=computeAreaLatestDates(base); // 落後判斷以「目前頁簽全部資料」為準，不受篩選條件影響
   const tb=document.getElementById('payment-table');
-  tb.innerHTML=filtered.length?filtered.map(p=>`<tr><td><span class="badge badge-blue">${p.area}</span></td><td>${p.fillDate||'—'}</td><td>${p.date||'—'}</td><td>${p.note?`<span class="badge badge-orange">${p.note}</span>`:'<span style="color:var(--gray-400)">—</span>'}</td><td>${p.user}</td><td>${p.createdAt}</td><td><button class="btn btn-sm btn-danger" onclick="deleteRecord('payments','${p.id}',renderPaymentTable)">刪除</button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:30px">尚無符合條件的紀錄</td></tr>';
+  tb.innerHTML=filtered.length?filtered.map(p=>{
+    const isLatestForArea = p.date && latestByArea[p.area]===p.date;
+    const isBehind = isLatestForArea && p.date<threshold;
+    const rowStyle = isBehind ? 'background:#fde8e8' : '';
+    return `<tr style="${rowStyle}"><td><span class="badge badge-blue">${p.area}</span></td><td>${p.fillDate||'—'}</td><td>${p.date||'—'}${isBehind?' <span style="color:#c0392b;font-weight:700;font-size:11px">⚠ 落後</span>':''}</td><td>${p.note?`<span class="badge badge-orange">${p.note}</span>`:'<span style="color:var(--gray-400)">—</span>'}</td><td>${p.user}</td><td>${p.createdAt}</td><td><button class="btn btn-sm btn-danger" onclick="deleteRecord('payments','${p.id}',renderPaymentTable)">刪除</button></td></tr>`;
+  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:30px">尚無符合條件的紀錄</td></tr>';
 }
 function clearPaymentFilter(){
   ['filter-date-from','filter-date-to'].forEach(id=>document.getElementById(id).value='');
@@ -1923,6 +2014,44 @@ function renderUserTable(){
       ${a.role!=='admin'?`<button class="btn btn-sm btn-outline" onclick="openEditPermModal('${a.id}')">權限</button>`:''}
     </td></tr>`;
   }).join('');
+  renderAreaTypeTable();
+}
+function renderAreaTypeTable(){
+  const tb=document.getElementById('area-type-table');
+  if(!tb) return;
+  tb.innerHTML=AREA_OPTIONS.map(area=>{
+    const cfg=CACHE.areaPaymentTypes.find(a=>a.area===area);
+    const hasMonthly=cfg?cfg.hasMonthly:true;
+    const hasTransfer=cfg?cfg.hasTransfer:true;
+    return `<tr><td>${area}</td>
+      <td style="text-align:center"><input type="checkbox" ${hasMonthly?'checked':''} onchange="saveAreaPaymentType('${area}','has_monthly',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" ${hasTransfer?'checked':''} onchange="saveAreaPaymentType('${area}','has_transfer',this.checked)"></td>
+    </tr>`;
+  }).join('');
+}
+async function saveAreaPaymentType(area, field, value){
+  let cfg=CACHE.areaPaymentTypes.find(a=>a.area===area);
+  if(cfg){
+    const result=await sbUpdateDebug('area_payment_types',cfg.id,{[field]:value,updated_at:nowStr()});
+    if(result.ok){ cfg[field==='has_monthly'?'hasMonthly':'hasTransfer']=value; showNotify(`${area} 設定已更新 ✓`,'success'); }
+    else{
+      const msg=result.error?.message||result.error?.hint||result.error?.code||('HTTP '+result.status);
+      console.error('area_payment_types 更新失敗',result);
+      showNotify('儲存失敗：'+msg,'error');
+    }
+  }else{
+    const newId=pid();
+    const payload={id:newId,area,has_monthly:field==='has_monthly'?value:true,has_transfer:field==='has_transfer'?value:true};
+    const result=await sbInsertDebug('area_payment_types',payload);
+    if(result.ok){
+      CACHE.areaPaymentTypes.push({id:newId,area,hasMonthly:payload.has_monthly,hasTransfer:payload.has_transfer});
+      showNotify(`${area} 設定已更新 ✓`,'success');
+    }else{
+      const msg=result.error?.message||result.error?.hint||result.error?.code||('HTTP '+result.status);
+      console.error('area_payment_types 新增失敗',result);
+      showNotify('儲存失敗：'+msg,'error');
+    }
+  }
 }
 function openEditPermModal(userId){
   const acc=CACHE.accounts.find(a=>a.id===userId);
