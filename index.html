@@ -1327,7 +1327,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-17-adminhub-v2（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-17-navbugfix-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1409,7 +1409,7 @@ async function enterApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('topbar-name').textContent=currentUser.name;
   document.getElementById('avatar-initial').textContent=currentUser.name.slice(0,1);
-  if(currentUser.role==='admin'){document.querySelectorAll('.admin-only').forEach(el=>el.style.display='flex');}
+  if(currentUser.role==='admin'){document.querySelectorAll('.nav-item.admin-only').forEach(el=>el.style.display='flex');}
   if(!window.ORIGINAL_SECTION_HTML_CAPTURED){
     PERMISSION_SECTIONS.forEach(s=>{ const el=document.getElementById('sec-'+s.key); if(el) ORIGINAL_SECTION_HTML[s.key]=el.innerHTML; });
     window.ORIGINAL_SECTION_HTML_CAPTURED=true;
@@ -1507,7 +1507,7 @@ async function doLogout(){
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
   document.getElementById('login-err').textContent='';
-  document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
+  document.querySelectorAll('.nav-item.admin-only').forEach(el=>el.style.display='none');
 }
 
 // ── NAV ──
