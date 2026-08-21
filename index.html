@@ -288,7 +288,10 @@
         </div>
 
         <div class="card">
-          <div class="card-title">🚦 各區域繳單進度總覽<span id="payment-progress-threshold" style="font-weight:400;font-size:12px;color:var(--gray-400);margin-left:8px"></span></div>
+          <div class="card-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:10px">
+            <span>🚦 各區域繳單進度總覽<span id="payment-progress-threshold" style="font-weight:400;font-size:12px;color:var(--gray-400);margin-left:8px"></span></span>
+            <select id="payment-progress-period" onchange="renderPaymentProgressStatus()" style="margin-left:auto;font-size:12.5px;padding:5px 8px;font-weight:400"></select>
+          </div>
           <div id="payment-progress-status" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
         </div>
 
@@ -1327,7 +1330,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-17-navbugfix-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-17-paymentperiodselect-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1694,7 +1697,24 @@ function getPaymentCycleRange(){
   const startY = endM===1?endY-1:endY;
   return { start:`${startY}-${pad(startM)}-26`, end:`${endY}-${pad(endM)}-25` };
 }
-// 依「1/6/11/16/21/27 日檢查點」規則，算出「今天」對應的應繳進度門檻日期
+// 產生「本期＋過去 N 期」的下拉選項，供查看歷史期間用
+function generatePaymentCycleOptions(n=12){
+  const {end:currentEnd}=getPaymentCycleRange();
+  const [cy,cm]=currentEnd.split('-').map(Number);
+  const pad=x=>String(x).padStart(2,'0');
+  const opts=[];
+  for(let i=0;i<n;i++){
+    let m=cm-i, y=cy;
+    while(m<=0){ m+=12; y-=1; }
+    const end=`${y}-${pad(m)}-25`;
+    const startM=m===1?12:m-1;
+    const startY=m===1?y-1:y;
+    const start=`${startY}-${pad(startM)}-26`;
+    opts.push({start,end,label:`${start} ～ ${end}`+(i===0?'（本期）':''),isCurrent:i===0});
+  }
+  return opts;
+}
+// 依「1/6/11/16/21/27 日檢查點」規則，算出「今天」對應的應繳進度門檻日期（僅適用於查看「本期」時）
 function getPaymentProgressThreshold(){
   const now=new Date();
   const y=now.getFullYear(), m=now.getMonth()+1, d=now.getDate();
@@ -1708,9 +1728,9 @@ function getPaymentProgressThreshold(){
   const prevMonthLastDay=new Date(y, m-1, 0); // 當月第0天＝上月最後一天
   return `${prevMonthLastDay.getFullYear()}-${pad(prevMonthLastDay.getMonth()+1)}-${pad(prevMonthLastDay.getDate())}`;
 }
-// 只計算「本期（26-25）」範圍內的紀錄，跨期的舊資料不列入，等於每期自動歸零重算
-function computeAreaLatestDates(list){
-  const {start,end}=getPaymentCycleRange();
+// 只計算指定期間範圍內的紀錄，跨期的舊資料不列入；不指定 range 時預設為「本期（26-25）」
+function computeAreaLatestDates(list, range){
+  const {start,end}=range||getPaymentCycleRange();
   const byArea={};
   list.forEach(p=>{
     if(!p.date) return;
@@ -1720,12 +1740,21 @@ function computeAreaLatestDates(list){
   return byArea;
 }
 function renderPaymentProgressStatus(){
-  const threshold=getPaymentProgressThreshold();
-  const {start,end}=getPaymentCycleRange();
+  const periodSel=document.getElementById('payment-progress-period');
+  if(periodSel && periodSel.options.length===0){
+    const opts=generatePaymentCycleOptions(12);
+    periodSel.innerHTML=opts.map(o=>`<option value="${o.start}|${o.end}">${o.label}</option>`).join('');
+  }
+  const [selStart,selEnd]=(periodSel?.value||'').split('|');
+  const range = selStart&&selEnd ? {start:selStart,end:selEnd} : getPaymentCycleRange();
+  const isCurrentPeriod = range.start===getPaymentCycleRange().start && range.end===getPaymentCycleRange().end;
+  const threshold = isCurrentPeriod ? getPaymentProgressThreshold() : range.end; // 查看過去期間時，門檻＝該期完整結束日
   const thresholdEl=document.getElementById('payment-progress-threshold');
-  if(thresholdEl) thresholdEl.textContent=`（本期範圍 ${start} ～ ${end }，今日應繳進度至少要到 ${threshold}）`;
+  if(thresholdEl) thresholdEl.textContent = isCurrentPeriod
+    ? `（本期範圍 ${range.start} ～ ${range.end}，今日應繳進度至少要到 ${threshold}）`
+    : `（查看期間 ${range.start} ～ ${range.end}，該期應繳齊至 ${threshold}）`;
   const list=CACHE.payments.filter(p=>(p.paymentType||'monthly')===currentPaymentType);
-  const byArea=computeAreaLatestDates(list);
+  const byArea=computeAreaLatestDates(list, range);
   const el=document.getElementById('payment-progress-status');
   if(!el) return;
   const applicableAreas=AREA_OPTIONS.filter(a=>areaAppliesToType(a,currentPaymentType));
@@ -1734,7 +1763,7 @@ function renderPaymentProgressStatus(){
     const behind = !latest || latest<threshold;
     return `<div style="padding:8px 6px;border-radius:var(--radius);font-size:12px;text-align:center;background:${behind?'#fde8e8':'#e6f7ee'};color:${behind?'#c0392b':'#1a7a4c'};border:1.5px solid ${behind?'#f1a9a0':'#a8e6c1'}">
       <div style="font-weight:700">${area}</div>
-      <div style="font-size:10.5px;margin-top:3px">${latest||'本期尚無紀錄'}</div>
+      <div style="font-size:10.5px;margin-top:3px">${latest||'該期尚無紀錄'}</div>
       <div style="font-size:10.5px;margin-top:2px;font-weight:700">${behind?'⚠ 落後':'✓ 正常'}</div>
     </div>`;
   }).join('');
@@ -3736,8 +3765,23 @@ function exportPaymentPDF(){
   const refDate=from||to||new Date().toISOString().split('T')[0];
   const refYear=refDate.slice(0,4);
   const refMonth=refDate.slice(5,7);
-  const monthStart=`${refYear}-${refMonth}-01`;
-  const monthEnd=`${refYear}-${refMonth}-31`;
+  let monthStart, monthEnd, periodLabel;
+  if(currentPaymentType==='transfer'){
+    // 20轉月：週期為「上月21日～當月20日」，跟月結（整個日曆月）不同
+    const [ry,rm,rd]=refDate.split('-').map(Number);
+    let endY=ry, endM=rm;
+    if(rd>=21){ endM=rm+1; if(endM>12){endM=1;endY=ry+1;} }
+    const startM=endM===1?12:endM-1;
+    const startY=endM===1?endY-1:endY;
+    const pad=n=>String(n).padStart(2,'0');
+    monthStart=`${startY}-${pad(startM)}-21`;
+    monthEnd=`${endY}-${pad(endM)}-20`;
+    periodLabel=`${monthStart} ～ ${monthEnd}`;
+  }else{
+    monthStart=`${refYear}-${refMonth}-01`;
+    monthEnd=`${refYear}-${refMonth}-31`;
+    periodLabel=`${refYear}年${parseInt(refMonth)}月`;
+  }
   const rows=targetAreas.map(area=>{
     const areaRecs=base.filter(p=>p.area===area&&p.fillDate>=monthStart&&p.fillDate<=monthEnd).sort((a,b)=>(a.fillDate||'').localeCompare(b.fillDate||''));
     const rec=areaRecs.length>0?areaRecs[areaRecs.length-1]:null;
@@ -3755,29 +3799,29 @@ function exportPaymentPDF(){
   pdfText(doc,'展晟財會部',MARGIN,y,TABLE_W,10,{fs:14,bold:false,color:'#C8962B',align:'center'});y+=10;
   pdfText(doc,`繳單進度報表【${typeLabel}】`,MARGIN,y,TABLE_W,16,{fs:PDF_FS_TITLE,bold:true,color:'#8B1A1A',align:'center'});y+=18;
   doc.setDrawColor(200,150,43);doc.setLineWidth(0.8);doc.line(MARGIN+20,y,PAGE_W-MARGIN-20,y);doc.setLineWidth(0.2);y+=6;
-  pdfText(doc,`查詢月份：${refYear}年${parseInt(refMonth)}月　　列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=9;
+  pdfText(doc,`查詢期間：${periodLabel}　　列印時間：${nowStr()}`,MARGIN,y,TABLE_W,6,{fs:9,color:'#666'});y+=9;
   const cols=[{x:MARGIN,w:22,label:'區　域'},{x:MARGIN+22,w:32,label:'繳單進度'},{x:MARGIN+54,w:98,label:'備　　　　　　　　　　　　　　　　　　　註'},{x:MARGIN+152,w:38,label:'回　報　者'}];
-  doc.setFillColor(139,26,26);doc.rect(MARGIN,y,TABLE_W,HDR_H,'F');
-  cols.forEach(c=>{pdfText(doc,c.label,c.x+0.5,y+0.5,c.w-1,HDR_H-1,{fs:PDF_FS_HDR,bold:true,color:'#ffffff',align:'center'});});
+  doc.setFillColor(219,234,254);doc.rect(MARGIN,y,TABLE_W,HDR_H,'F');
+  cols.forEach(c=>{pdfText(doc,c.label,c.x+0.5,y+0.5,c.w-1,HDR_H-1,{fs:PDF_FS_HDR,bold:true,color:'#1e40af',align:'center'});});
   y+=HDR_H;
   rows.forEach((r,i)=>{
-    const bg=i%2===0?[255,245,245]:[255,255,255];
+    const bg=i%2===0?[247,250,255]:[255,255,255];
     doc.setFillColor(bg[0],bg[1],bg[2]);doc.rect(MARGIN,y,TABLE_W,ROW_H,'F');
-    doc.setDrawColor(210,208,215);doc.rect(MARGIN,y,TABLE_W,ROW_H);
+    doc.setDrawColor(225,231,240);doc.rect(MARGIN,y,TABLE_W,ROW_H);
     const isBelowMedian=r.date&&medianDate&&r.date<medianDate;
     const dateDisplay=r.missing?'未繳單':fmtMD(r.date);
-    const dateColor=(r.missing||isBelowMedian)?'#b83232':'#222';
+    const dateColor=(r.missing||isBelowMedian)?'#dc2626':'#222';
     const dateBold=r.missing||isBelowMedian;
-    pdfText(doc,r.area,cols[0].x+0.5,y+0.5,cols[0].w-1,ROW_H-1,{fs:FS_BODY,align:'center',color:r.missing?'#b83232':'#222'});
+    pdfText(doc,r.area,cols[0].x+0.5,y+0.5,cols[0].w-1,ROW_H-1,{fs:FS_BODY,align:'center',color:r.missing?'#dc2626':'#2563eb'});
     pdfText(doc,dateDisplay,cols[1].x+0.5,y+0.5,cols[1].w-1,ROW_H-1,{fs:FS_BODY,align:'center',color:dateColor,bold:dateBold});
     pdfText(doc,(r.note||'—').slice(0,35),cols[2].x+1,y+0.5,cols[2].w-2,ROW_H-1,{fs:FS_BODY,color:'#555'});
     pdfText(doc,r.user,cols[3].x+0.5,y+0.5,cols[3].w-1,ROW_H-1,{fs:FS_BODY,align:'center'});
     y+=ROW_H;
   });
   y+=3;
-  if(medianDate){pdfText(doc,`※ 繳單日期中間值：${fmtMD(medianDate)}　低於中間值以紅色粗體標示`,MARGIN,y,TABLE_W,5,{fs:8,color:'#b83232'});y+=6;}
+  if(medianDate){pdfText(doc,`※ 繳單日期中間值：${fmtMD(medianDate)}　低於中間值以紅色粗體標示`,MARGIN,y,TABLE_W,5,{fs:8,color:'#dc2626'});y+=6;}
   pdfText(doc,`共 ${rows.filter(r=>!r.missing).length} 個區域已回報／${rows.filter(r=>r.missing).length} 個未繳單`,MARGIN,y,TABLE_W,5,{fs:8,color:'#666'});
-  doc.save(`繳單進度報表_${typeLabel}_${refYear}${refMonth}.pdf`);
+  doc.save(`繳單進度報表_${typeLabel}_${monthStart.replace(/-/g,'')}-${monthEnd.replace(/-/g,'')}.pdf`);
   showNotify(`【${typeLabel}】PDF 已下載`,'success');
 }
 
