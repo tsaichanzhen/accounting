@@ -81,11 +81,7 @@
 
   /* BUTTONS */
   .btn{padding:9px 20px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;}
-  .btn.perm-locked{opacity:.4;filter:grayscale(60%);cursor:not-allowed;}
-  .admhub-tab{padding:10px 14px;border-radius:var(--radius);font-size:13.5px;font-weight:600;cursor:pointer;color:var(--gray-600);transition:all .15s;}
-  .admhub-tab:hover{background:var(--gray-100);}
-  .admhub-tab.active{background:var(--navy);color:#fff;}
-  .btn.perm-locked:hover{opacity:.4;}
+  .btn.perm-locked{opacity:.4;filter:grayscale(60%);cursor:not-allowed;}  .btn.perm-locked:hover{opacity:.4;}
   .btn-primary{background:var(--navy);color:var(--white);}
   .btn-primary:hover{background:var(--navy-light);}
   .btn-gold{background:var(--gold);color:var(--navy);}
@@ -227,9 +223,12 @@
       <div class="sidebar-divider"></div>
       <div class="sidebar-section">
         <span class="sidebar-label">系統</span>
-        <div class="nav-item admin-only" onclick="showSection('adminhub',this)"><span class="icon">⚙️</span>帳號管理</div>
+        <div class="nav-item admin-only" onclick="showSection('users',this)"><span class="icon">👥</span>帳號管理</div>
+        <div class="nav-item admin-only" onclick="showSection('areatype',this)"><span class="icon">🏬</span>應收區域轉月設定</div>
+        <div class="nav-item admin-only" onclick="showSection('mailsetting',this)"><span class="icon">✉</span>信箱設定</div>
         <div class="nav-item" id="nav-myhistory" onclick="showSection('myhistory',this)"><span class="icon">📅</span>我的紀錄</div>
         <div class="nav-item" id="nav-changepwd" onclick="showSection('changepwd',this)"><span class="icon">🔑</span>修改密碼</div>
+        <div class="nav-item admin-only" onclick="showSection('history',this)"><span class="icon">🕐</span>登入歷程</div>
       </div>
     </div>
 
@@ -367,94 +366,83 @@
       </div>
 
       <!-- USERS (Admin) -->
-      <div class="section admin-only" id="sec-adminhub">
+      <div class="section admin-only" id="sec-users">
         <div class="page-header">
-          <div><div class="page-title">帳號管理</div><div class="page-subtitle">系統管理設定</div></div>
-        </div>
-        <div style="display:flex;gap:20px;align-items:flex-start">
-          <div style="min-width:170px;display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-            <div class="admhub-tab active" data-tab="users" onclick="switchAdminTab('users')">👥 帳號管理</div>
-            <div class="admhub-tab" data-tab="areatype" onclick="switchAdminTab('areatype')">🏬 應收區域轉月設定</div>
-            <div class="admhub-tab" data-tab="mailsetting" onclick="switchAdminTab('mailsetting')">✉ 信箱設定</div>
-            <div class="admhub-tab" data-tab="myhistory" onclick="showSection('myhistory', document.getElementById('nav-myhistory'))">📅 我的紀錄</div>
-            <div class="admhub-tab" data-tab="changepwd" onclick="showSection('changepwd', document.getElementById('nav-changepwd'))">🔑 修改密碼</div>
-            <div class="admhub-tab" data-tab="history" onclick="switchAdminTab('history')">🕐 登入歷程</div>
+          <div><div class="page-title">帳號管理</div><div class="page-subtitle">管理財會部人員登入帳號</div></div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-outline" onclick="openResetPwdModal()">🔐 重設密碼</button>
+            <button class="btn btn-primary" onclick="openAddUserModal()">＋ 新增帳號</button>
           </div>
-          <div style="flex:1;min-width:0">
+        </div>
+        <div class="card">
+          <div class="card-title">👥 人員帳號列表</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th style="min-width:200px">權限</th><th>建立時間</th><th>操作</th></tr></thead>
+            <tbody id="user-table"></tbody>
+          </table></div>
+        </div>
+      </div>
 
-            <div class="adminhub-panel" id="adminhub-panel-users">
-              <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px">
-                <button class="btn btn-outline" onclick="openResetPwdModal()">🔐 重設密碼</button>
-                <button class="btn btn-primary" onclick="openAddUserModal()">＋ 新增帳號</button>
-              </div>
-              <div class="card">
-                <div class="card-title">👥 人員帳號列表</div>
-                <div class="table-wrap"><table>
-                  <thead><tr><th>姓名</th><th>帳號</th><th>角色</th><th>狀態</th><th style="min-width:200px">權限</th><th>建立時間</th><th>操作</th></tr></thead>
-                  <tbody id="user-table"></tbody>
-                </table></div>
-              </div>
+      <!-- AREA PAYMENT TYPE (Admin) -->
+      <div class="section admin-only" id="sec-areatype">
+        <div class="page-header"><div><div class="page-title">應收區域轉月設定</div><div class="page-subtitle">設定各區域適用哪些繳單類型</div></div></div>
+        <div class="card">
+          <div class="card-title">🏬 各區域繳單類型設定</div>
+          <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:10px">勾選該區域適用哪些繳單類型，未勾選的類型不會出現在「繳單進度」的區域選單與進度總覽中</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>區域</th><th style="text-align:center">月結</th><th style="text-align:center">20轉月</th></tr></thead>
+            <tbody id="area-type-table"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- MAIL SETTING (Admin) -->
+      <div class="section admin-only" id="sec-mailsetting">
+        <div class="page-header"><div><div class="page-title">信箱設定</div><div class="page-subtitle">設定部門主管的收信信箱，週報與KPI彙整時自動帶入</div></div></div>
+        <div class="card" style="max-width:520px">
+          <div class="card-title">✉ 部門主管信箱</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>主管姓名</label>
+              <input type="text" id="manager-name" placeholder="例：王主管">
             </div>
-
-            <div class="adminhub-panel" id="adminhub-panel-areatype" style="display:none">
-              <div class="card">
-                <div class="card-title">🏬 各區域繳單類型設定</div>
-                <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:10px">勾選該區域適用哪些繳單類型，未勾選的類型不會出現在「繳單進度」的區域選單與進度總覽中</div>
-                <div class="table-wrap"><table>
-                  <thead><tr><th>區域</th><th style="text-align:center">月結</th><th style="text-align:center">20轉月</th></tr></thead>
-                  <tbody id="area-type-table"></tbody>
-                </table></div>
-              </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>主管 Email</label>
+              <input type="email" id="manager-email" placeholder="例：manager@company.com">
             </div>
-
-            <div class="adminhub-panel" id="adminhub-panel-mailsetting" style="display:none">
-              <div class="card" style="max-width:520px">
-                <div class="card-title">✉ 部門主管信箱</div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>主管姓名</label>
-                    <input type="text" id="manager-name" placeholder="例：王主管">
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>主管 Email</label>
-                    <input type="email" id="manager-email" placeholder="例：manager@company.com">
-                  </div>
-                </div>
-                <div style="margin-top:4px;padding:14px 16px;background:var(--blue-light);border-radius:var(--radius);font-size:13px;color:var(--blue);line-height:1.8">
-                  <b>📌 寄信主旨格式說明：</b><br>
-                  週報：<code style="background:#fff;padding:2px 6px;border-radius:4px">[財會部週報] YYYY/M/D～M/D｜填寫人：XXX</code><br>
-                  KPI：<code style="background:#fff;padding:2px 6px;border-radius:4px">[財會部KPI] YYYY年M月｜填寫人：XXX</code>
-                </div>
-                <div class="modal-footer" style="margin-top:16px;justify-content:flex-start">
-                  <button class="btn btn-primary" onclick="saveMailSetting()">儲存設定</button>
-                  <span id="mail-setting-status" style="font-size:13px;color:var(--green);margin-left:12px"></span>
-                </div>
-              </div>
-            </div>
-
-            <div class="adminhub-panel" id="adminhub-panel-history" style="display:none">
-              <div class="filter-bar">
-                <div class="form-group"><label>篩選日期</label><input type="date" id="filter-history-date" onchange="renderHistoryTable()"></div>
-                <div class="form-group"><label>人員</label>
-                  <select id="filter-history-user" onchange="renderHistoryTable()"><option value="">全部人員</option></select>
-                </div>
-                <button class="btn btn-outline btn-sm" onclick="clearHistoryFilter()">清除</button>
-              </div>
-              <div class="card">
-                <div class="card-title">🕐 登入紀錄</div>
-                <div class="table-wrap"><table>
-                  <thead><tr><th>姓名</th><th>帳號</th><th>登入時間</th><th>登出時間</th><th>操作類型</th></tr></thead>
-                  <tbody id="history-table"></tbody>
-                </table></div>
-              </div>
-            </div>
-
+          </div>
+          <div style="margin-top:4px;padding:14px 16px;background:var(--blue-light);border-radius:var(--radius);font-size:13px;color:var(--blue);line-height:1.8">
+            <b>📌 寄信主旨格式說明：</b><br>
+            週報：<code style="background:#fff;padding:2px 6px;border-radius:4px">[財會部週報] YYYY/M/D～M/D｜填寫人：XXX</code><br>
+            KPI：<code style="background:#fff;padding:2px 6px;border-radius:4px">[財會部KPI] YYYY年M月｜填寫人：XXX</code>
+          </div>
+          <div class="modal-footer" style="margin-top:16px;justify-content:flex-start">
+            <button class="btn btn-primary" onclick="saveMailSetting()">儲存設定</button>
+            <span id="mail-setting-status" style="font-size:13px;color:var(--green);margin-left:12px"></span>
           </div>
         </div>
       </div>
 
+      <!-- LOGIN HISTORY (Admin) -->
+      <div class="section admin-only" id="sec-history">
+        <div class="page-header"><div><div class="page-title">登入歷程</div><div class="page-subtitle">所有人員的登入與登出記錄</div></div></div>
+        <div class="filter-bar">
+          <div class="form-group"><label>篩選日期</label><input type="date" id="filter-history-date" onchange="renderHistoryTable()"></div>
+          <div class="form-group"><label>人員</label>
+            <select id="filter-history-user" onchange="renderHistoryTable()"><option value="">全部人員</option></select>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearHistoryFilter()">清除</button>
+        </div>
+        <div class="card">
+          <div class="card-title">🕐 登入紀錄</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>姓名</th><th>帳號</th><th>登入時間</th><th>登出時間</th><th>操作類型</th></tr></thead>
+            <tbody id="history-table"></tbody>
+          </table></div>
+        </div>
+      </div>
 
       <!-- MY HISTORY -->
       <div class="section" id="sec-myhistory">
@@ -1339,7 +1327,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-17-adminhub-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-17-adminhub-v2（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1462,10 +1450,8 @@ function startAutoRefresh(){
     if(id==='schedule') renderScheduleCalendar();
     if(id==='history') renderHistoryTable();
     if(id==='users') renderUserTable();
-    if(id==='adminhub'){
-      const activeTab=document.querySelector('.admhub-tab.active');
-      if(activeTab) switchAdminTab(activeTab.dataset.tab);
-    }
+    if(id==='areatype') renderAreaTypeTable();
+    if(id==='mailsetting') loadMailSetting();
     if(id==='pettycash') renderPettyCashTable();
   }, 30000); // 每30秒更新一次
 }
@@ -1541,7 +1527,9 @@ function showSection(id,el){
   el.classList.add('active');
   if(id==='history') renderHistoryTable();
   if(id==='myhistory') renderMyHistory();
-  if(id==='adminhub') switchAdminTab('users');
+  if(id==='users') renderUserTable();
+  if(id==='areatype') renderAreaTypeTable();
+  if(id==='mailsetting') loadMailSetting();
   if(id==='dashboard') refreshDash();
   if(id==='schedule'){ initScheduleForm(); renderScheduleCalendar(); }
   if(id==='personal'){ renderPersonalCalendar(); }
@@ -2022,16 +2010,6 @@ async function adminResetPassword(){
     closeModal('modal-resetpwd');
     showNotify(`密碼已重設完成 ✓`,'success');
   }else{showNotify('重設失敗，請重試','error');}
-}
-function switchAdminTab(tab){
-  document.querySelectorAll('.admhub-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  document.querySelectorAll('.adminhub-panel').forEach(p=>p.style.display='none');
-  const panel=document.getElementById('adminhub-panel-'+tab);
-  if(panel) panel.style.display='block';
-  if(tab==='users') renderUserTable();
-  if(tab==='areatype') renderAreaTypeTable();
-  if(tab==='mailsetting') loadMailSetting();
-  if(tab==='history') renderHistoryTable();
 }
 function renderUserTable(){
   const accounts=CACHE.accounts;
