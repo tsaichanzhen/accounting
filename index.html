@@ -1330,7 +1330,7 @@ const WR_LABELS=['負責區域核單','負責收款區域','負責核帳區域',
 function nowStr(){return new Date().toLocaleString('zh-TW',{hour12:false});}
 function pid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
-console.log('財會工作進度小幫手 build: 2026-08-21-checkerauditor-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
+console.log('財會工作進度小幫手 build: 2026-08-31-deleteowner-v1（若您在 Console 沒看到這行，代表載入的是舊版快取，請確認 GitHub 檔案與 ?v= 版本號）');
 let currentUser=null;
 
 // ── 登入狀態保留（F5/重新整理不登出）＋ 閒置逾時自動登出 ──
@@ -1801,7 +1801,9 @@ function renderPaymentTable(){
     const isLatestForArea = p.date && latestByArea[p.area]===p.date;
     const isBehind = isLatestForArea && p.date<threshold;
     const rowStyle = isBehind ? 'background:#fde8e8' : '';
-    return `<tr style="${rowStyle}"><td><span class="badge badge-blue">${p.area}</span></td><td>${p.fillDate||'—'}</td><td>${p.date||'—'}${isBehind?' <span style="color:#c0392b;font-weight:700;font-size:11px">⚠ 落後</span>':''}</td><td>${p.note?`<span class="badge badge-orange">${p.note}</span>`:'<span style="color:var(--gray-400)">—</span>'}</td><td>${p.user}</td><td>${p.createdAt}</td><td><button class="btn btn-sm btn-danger" onclick="deleteRecord('payments','${p.id}',renderPaymentTable)">刪除</button></td></tr>`;
+    const canDelete = currentUser.role==='admin' || currentUser.id===p.userId;
+    const deleteBtn = canDelete ? `<button class="btn btn-sm btn-danger" onclick="deleteRecord('payments','${p.id}',renderPaymentTable)">刪除</button>` : '<span style="color:var(--gray-400);font-size:12px">—</span>';
+    return `<tr style="${rowStyle}"><td><span class="badge badge-blue">${p.area}</span></td><td>${p.fillDate||'—'}</td><td>${p.date||'—'}${isBehind?' <span style="color:#c0392b;font-weight:700;font-size:11px">⚠ 落後</span>':''}</td><td>${p.note?`<span class="badge badge-orange">${p.note}</span>`:'<span style="color:var(--gray-400)">—</span>'}</td><td>${p.user}</td><td>${p.createdAt}</td><td>${deleteBtn}</td></tr>`;
   }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--gray-400);padding:30px">尚無符合條件的紀錄</td></tr>';
 }
 function clearPaymentFilter(){
@@ -3770,6 +3772,13 @@ const TABLE_TO_SECTION={payments:'payment',weeklies:'weekly',kpis:'kpi',schedule
 async function deleteRecord(table,id,cb){
   const section=TABLE_TO_SECTION[table];
   if(section && !requireEditPerm(section)) return;
+  if(table==='payments'){
+    const rec=CACHE.payments.find(p=>p.id===id);
+    if(rec && currentUser.role!=='admin' && currentUser.id!==rec.userId){
+      showNotify('只有管理員或本人可以刪除此筆紀錄','error');
+      return;
+    }
+  }
   if(!confirm('確定要刪除此筆紀錄？'))return;
   const ok=await sbDelete(table,id);
   if(ok){
